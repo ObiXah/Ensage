@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Ensage;
 using Ensage.Common;
 using Ensage.Common.Extensions;
@@ -24,11 +25,12 @@ namespace ZeusSharp
         private static Font _notice;
         private static Line _line;
         private static string steallableHero;
+        private static string heronametargeted;
         private static Hero target;
         private static Hero me;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
         private static readonly Menu Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
-
+        private static Hero[] killableHeroes;
         private static int[] rDmg = new int[3] { 225, 350, 475 };
         private static readonly int[] qDmg = new int[4] {85, 100, 115, 145};
         private static readonly int[] eDmg = new int[5] {0, 5, 7, 9, 11};
@@ -62,7 +64,7 @@ namespace ZeusSharp
             _line = new Line(Drawing.Direct3DDevice9);
 
 
-            var comboMenu = new Menu("Combo Tweaks", "combomenu", false, @"resource\flash3\images\\challenges\icon_challenges_first_bloods.png\icon_challenges_first_bloods.png", true);
+            var comboMenu = new Menu("Combo Tweaks", "combomenu", false, @"..\other\statpop_exclaim", true);
             comboMenu.AddItem(
                 new MenuItem("blink", "Use Blink").SetValue(true)
                     .SetTooltip("Blinks to target but not closer than specified range."));
@@ -93,7 +95,7 @@ namespace ZeusSharp
                     .SetTooltip("Use R steal only when NOT in combo."));
             stealMenu.AddItem(new MenuItem("stealEdmg", "Try to add E dmg if possible").SetValue(true));
 
-            var drawMenu = new Menu("Drawings", "drawmenu");
+            var drawMenu = new Menu("Drawings", "drawmenu", false, @"..\other\statpop_star", true);
             drawMenu.AddItem(
                 new MenuItem("drawblinkrange", "Draw Combo Blink Range").SetValue(true)
                     .SetTooltip("Uses blink range + safe range."));
@@ -391,6 +393,8 @@ namespace ZeusSharp
         public static void Killsteal(EventArgs args)
         {
             var me = ObjectMgr.LocalHero;
+            var killcounter = new Dictionary<Hero, bool>();
+            //var killableamount;
             //if (me == null || !Game.IsInGame || me.Spellbook.Spell4 == null)
             //    stealToggle = false;
 
@@ -437,10 +441,28 @@ namespace ZeusSharp
                         var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - v.MagicDamageResist));
                         if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1200)
                             damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*v.Health;
+                        
                         //Console.WriteLine(damage);
                         var unkillabletarget = v.Modifiers.Any(
                             x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                                  x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
+                        
+                        Console.WriteLine(enemy.Count);
+
+                        killcounter.Add(v, false);
+                        Console.WriteLine(killcounter.Count + "test");
+                        //for (int i = 0; i < enemy.Count; i++) // Loop with for.
+                        //{
+                        //    if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
+                        //    {
+                        //        enemy = 
+                        //    }
+                        //{
+                        //if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
+                        //{
+                        //    killableHeroes[] = v;
+                        //}
+
                         if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
                         {
                             drawStealNotice = true;
@@ -515,7 +537,6 @@ namespace ZeusSharp
             ParticleEffect effect;
             ParticleEffect scope;
             cdstore = cdstore + 1;
-
             #region cleanup old stuff
 
             if (!Game.IsInGame || me == null || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
@@ -544,6 +565,10 @@ namespace ZeusSharp
 
             if (target != null && target.IsAlive && !target.IsInvul())
             {
+                currenttargeted = target.NetworkName;
+                currenttargeted = currenttargeted.Replace("CDOTA_Unit_Hero_", "");
+                //currenttargeted = Regex.Replace(currenttargeted, @"^\w", m => m.Value.ToUpper());
+                Console.WriteLine(heronametargeted);
                 #region text draw
 
                 //var start = HUDInfo.GetHPbarPosition(target) + new Vector2(-HUDInfo.GetHPBarSizeX(target) / 2, -HUDInfo.GetHpBarSizeY(target) * 5);
@@ -565,6 +590,9 @@ namespace ZeusSharp
                     for (var i = 50; i < 53; i++)
                     {
                         if (Effect.TryGetValue(i, out scope)) continue;
+                        heronametargeted = target.NetworkName;
+                        heronametargeted = heronametargeted.Replace("CDOTA_Unit_Hero_", "");
+                        //heronametargeted = Regex.Replace(heronametargeted, @"^\w", m => m.Value.ToUpper());
                         scope =
                             target.AddParticleEffect(
                                 @"particles\units\heroes\hero_beastmaster\beastmaster_wildaxe_glow.vpcf");
@@ -572,7 +600,7 @@ namespace ZeusSharp
                         Effect.Add(i, scope);
                     }
             }
-            else if (!(!(target != null && target.IsAlive && !target.IsInvul()) || Menu.Item("drawtargetglow").GetValue<bool>()))
+            if (target == null || !target.IsAlive || target.IsInvul() || !Menu.Item("drawtargetglow").GetValue<bool>() || target.NetworkName.Replace("CDOTA_Unit_Hero_", "") != heronametargeted)
             {
                 for (var i = 50; i < 53; i++)
                 {
