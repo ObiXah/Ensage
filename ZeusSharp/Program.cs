@@ -681,7 +681,7 @@ namespace ZeusSharp
                 !Menu.Item("stealToggle").GetValue<bool>())
             {
                 DrawShadowText(
-                    "PRESS [" + Menu.Item("confirmSteal").GetValue<KeyBind>().Key + "] FOR STEAL " + steallableHero +
+                    "PRESS [" + Utils.KeyToText(Menu.Item("confirmSteal").GetValue<KeyBind>().Key) + "] FOR STEAL " + steallableHero +
                     "!", 7, 400, Color.Yellow, _notice);
             }
         }
