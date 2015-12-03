@@ -20,7 +20,6 @@ namespace ZeusSharp
         private static readonly int manaForQ = 235;
         private static int Wdrawn;
         private static int blinkdrawnr;
-        private static int cdstore;
         private static Font _text;
         private static Font _notice;
         private static Line _line;
@@ -30,17 +29,14 @@ namespace ZeusSharp
         private static Hero me;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
         private static readonly Menu Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
-        private static Hero[] killableHeroes;
         private static int[] rDmg = new int[3] { 225, 350, 475 };
         private static readonly int[] qDmg = new int[4] {85, 100, 115, 145};
         private static readonly int[] eDmg = new int[5] {0, 5, 7, 9, 11};
-        //private static readonly bool validtarget = target != null && target.IsAlive && !target.IsInvul() && (target.Team != me.Team);
 
         private static void Main()
         {
             Game.OnUpdate += Killsteal;
             Game.OnUpdate += Game_OnUpdate;
-            Game.OnWndProc += Game_OnWndProc;
             _text = new Font(
                 Drawing.Direct3DDevice9,
                 new FontDescription
@@ -129,7 +125,7 @@ namespace ZeusSharp
 
         public static void Game_OnUpdate(EventArgs args)
         {
-            var me = ObjectMgr.LocalHero;
+            me = ObjectMgr.LocalHero;
             if (!Game.IsInGame || me == null || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
             {
                 if (menuadded)
@@ -147,34 +143,16 @@ namespace ZeusSharp
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
 
             // Items
-            if (orchid == null)
-                orchid = me.FindItem("item_orchid");
-
-            if (sheepstick == null)
-                sheepstick = me.FindItem("item_sheepstick");
-
-            if (veil == null)
-                veil = me.FindItem("item_veil_of_discord");
-
-            if (soulring == null)
-                soulring = me.FindItem("item_soul_ring");
-
-            if (arcane == null)
-                arcane = me.FindItem("item_arcane_boots");
-
-            //if (blink == null)
+            orchid = me.FindItem("item_orchid");
+            sheepstick = me.FindItem("item_sheepstick");
+            veil = me.FindItem("item_veil_of_discord");
+            soulring = me.FindItem("item_soul_ring");
+            arcane = me.FindItem("item_arcane_boots");
             blink = me.FindItem("item_blink");
-
-            if (shiva == null)
-                shiva = me.FindItem("item_shivas_guard");
-
+            shiva = me.FindItem("item_shivas_guard");
             dagon = me.Inventory.Items.FirstOrDefault(item => item.Name.Contains("item_dagon"));
-
-            if (refresher == null)
-                refresher = me.FindItem("item_refresher");
-
-            if (ethereal == null)
-                ethereal = me.FindItem("item_ethereal_blade");
+            refresher = me.FindItem("item_refresher");
+            ethereal = me.FindItem("item_ethereal_blade");
 
             var refresherComboManacost = me.Spellbook.Spell4.ManaCost + me.Spellbook.Spell2.ManaCost +
                                          me.Spellbook.Spell1.ManaCost;
@@ -205,12 +183,12 @@ namespace ZeusSharp
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
                             creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
+
             if (Menu.Item("qFarm").GetValue<KeyBind>().Active)
             {
                 if (Utils.SleepCheck("fsleep"))
                 {
                     me.Move(Game.MousePosition);
-                    //Console.WriteLine((eDmg[elvl] * 0.01) * creep.Health);
                     Utils.Sleep(66 + Game.Ping, "fsleep");
                 }
                 foreach (var creep in creepQ.Where(creep => me.Spellbook.SpellQ.CanBeCasted() &&
@@ -228,17 +206,15 @@ namespace ZeusSharp
                     Utils.Sleep(100 + Game.Ping, "qfarm");
                 }
             }
+
             if (Menu.Item("active").GetValue<KeyBind>().Active && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
                 me.CanCast() && me.IsAlive)
             {
-                //Console.WriteLine("me.CanMove() = " + me.CanMove().ToString());
                 if (target != null && target.IsAlive && !target.IsInvul())
                 {
                     var targetPos = (target.Position - me.Position)*
                                     (me.Distance2D(target) - Menu.Item("saferange").GetValue<Slider>().Value)/
                                     me.Distance2D(target) + me.Position;
-                    //Console.WriteLine((blinkRange + Menu.Item("saferange").GetValue<Slider>().Value) + " " + me.Distance2D(target));
-                    //bpos = (v.position - me.position) * (GetDistance2D(me,v) - Range - 50) / GetDistance2D(me,v) + me.position
                     if (
                         blink != null &&
                         blink.CanBeCasted() &&
@@ -248,10 +224,10 @@ namespace ZeusSharp
                         )
                     {
                         blink.UseAbility(targetPos);
-                        Utils.Sleep(100 + Game.Ping, "blink1");
+                        Utils.Sleep(Game.Ping, "blink1");
                     }
 
-                    Utils.Sleep(me.GetTurnTime(target) + Game.Ping, "blink");
+                    Utils.Sleep(me.GetTurnTime(target), "blink");
 
                     if (soulring != null && me.Health > 300 &&
                         (me.Mana < me.Spellbook.Spell2.ManaCost ||
@@ -392,11 +368,7 @@ namespace ZeusSharp
 
         public static void Killsteal(EventArgs args)
         {
-            var me = ObjectMgr.LocalHero;
-            var killcounter = new Dictionary<Hero, bool>();
-            //var killableamount;
-            //if (me == null || !Game.IsInGame || me.Spellbook.Spell4 == null)
-            //    stealToggle = false;
+            me = ObjectMgr.LocalHero;
 
             if (Utils.SleepCheck("killstealR") && Game.IsInGame && me != null &&
                 me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus)
@@ -433,7 +405,6 @@ namespace ZeusSharp
                                     e.ClassID != ClassID.CDOTA_Unit_Brewmaster_PrimalStorm &&
                                     e.ClassID != ClassID.CDOTA_Unit_Undying_Tombstone &&
                                     e.ClassID != ClassID.CDOTA_Unit_Undying_Zombie &&
-                                    //e.ClassID != ClassID.CDOTA_Unit_Hero_Huskar && //huskar math?
                                     e.ClassID != ClassID.CDOTA_Ability_Juggernaut_HealingWard).ToList();
 
                     foreach (var v in enemy)
@@ -442,40 +413,19 @@ namespace ZeusSharp
                         if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1200)
                             damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*v.Health;
                         
-                        //Console.WriteLine(damage);
                         var unkillabletarget = v.Modifiers.Any(
                             x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                                  x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
                         
-                        //Console.WriteLine(enemy.Count);
-
-                        killcounter.Add(v, false);
-                        //Console.WriteLine(killcounter.Count + "test");
-                        //for (int i = 0; i < enemy.Count; i++) // Loop with for.
-                        //{
-                        //    if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
-                        //    {
-                        //        enemy = 
-                        //    }
-                        //{
-                        //if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
-                        //{
-                        //    killableHeroes[] = v;
-                        //}
-
                         if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
                         {
                             drawStealNotice = true;
 
-                            steallableHero = v.NetworkName;
-                            steallableHero = steallableHero.Replace("CDOTA_Unit_Hero_", "");
-                            steallableHero = steallableHero.ToUpper();
+                            steallableHero = v.NetworkName.Replace("CDOTA_Unit_Hero_", "").ToUpper();
 
                             if (
                                 (Menu.Item("confirmSteal").GetValue<KeyBind>().Active ||
-                                 Menu.Item("stealToggle").GetValue<bool>()) &&
-                                v != null && !v.IsIllusion
-                                )
+                                 Menu.Item("stealToggle").GetValue<bool>()) && !v.IsIllusion)
                             {
                                 if (soulring != null && soulring.CanBeCasted() && Utils.SleepCheck("soulring") &&
                                     me.Mana < me.Spellbook.Spell4.ManaCost &&
@@ -484,7 +434,7 @@ namespace ZeusSharp
                                     soulring.UseAbility();
                                     Utils.Sleep(Game.Ping, "soulring");
                                 }
-                                if (arcane != null && soulring.CanBeCasted() && Utils.SleepCheck("arcane") &&
+                                if (arcane != null && arcane.CanBeCasted() && Utils.SleepCheck("arcane") &&
                                     me.Mana < me.Spellbook.Spell4.ManaCost &&
                                     me.Mana + 135 > me.Spellbook.Spell4.ManaCost)
                                 {
@@ -492,6 +442,7 @@ namespace ZeusSharp
                                     Utils.Sleep(Game.Ping, "arcane");
                                 }
                                 if (arcane != null && soulring != null && Utils.SleepCheck("arcane") &&
+                                    arcane.CanBeCasted() && soulring.CanBeCasted() &&
                                     me.Mana < me.Spellbook.Spell4.ManaCost &&
                                     me.Mana + 285 > me.Spellbook.Spell4.ManaCost)
                                 {
@@ -503,23 +454,11 @@ namespace ZeusSharp
                                 {
                                     me.Spellbook.Spell4.UseAbility();
                                     Utils.Sleep(300, "killstealR");
-                                    //Console.WriteLine((Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1] * (1 - v.MagicDamageResist))));
                                 }
                             }
                         }
                     }
                 }
-            }
-        }
-
-        private static void Game_OnWndProc(WndEventArgs args)
-        {
-            if (!Game.IsChatOpen)
-            {
-                //if (refresher == null)
-                //{
-                //    refresherToggle = false;
-                //}
             }
         }
 
@@ -532,11 +471,10 @@ namespace ZeusSharp
 
         private static void Drawing_OnDraw(EventArgs args)
         {
-            var me = ObjectMgr.LocalHero;
+            me = ObjectMgr.LocalHero;
 
             ParticleEffect effect;
             ParticleEffect scope;
-            cdstore = cdstore + 1;
             #region cleanup old stuff
 
             if (!Game.IsInGame || me == null || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
@@ -565,32 +503,12 @@ namespace ZeusSharp
 
             if (target != null && target.IsAlive && !target.IsInvul())
             {
-                //currenttargeted = Regex.Replace(currenttargeted, @"^\w", m => m.Value.ToUpper());
-                //Console.WriteLine(heronametargeted);
-                #region text draw
-
-                //var start = HUDInfo.GetHPbarPosition(target) + new Vector2(-HUDInfo.GetHPBarSizeX(target) / 2, -HUDInfo.GetHpBarSizeY(target) * 5);
-                //var size = new Vector2(HUDInfo.GetHPBarSizeX(target), HUDInfo.GetHpBarSizeY(target) / 2) * 2;
-
-                //const string text = "TARGET";
-                //var textSize = Drawing.MeasureText(text, "Arial", new Vector2(size.Y * 2, size.X), FontFlags.AntiAlias);
-                //var textPos = start + new Vector2(size.X / 2 - textSize.X / 2, -textSize.Y / 2 + 2);
-                //Drawing.DrawText(
-                //    text,
-                //    textPos,
-                //    new Vector2(size.Y * 2, size.X),
-                //    Color.White,
-                //    FontFlags.AntiAlias | FontFlags.DropShadow | FontFlags.Additive);
-
-                #endregion
-
                 if (Menu.Item("drawtargetglow").GetValue<bool>())
                     for (var i = 50; i < 52; i++)
                     {
                         if (Effect.TryGetValue(i, out scope)) continue;
                         heronametargeted = target.NetworkName;
                         heronametargeted = heronametargeted.Replace("CDOTA_Unit_Hero_", "");
-                        //heronametargeted = Regex.Replace(heronametargeted, @"^\w", m => m.Value.ToUpper());
                         scope =
                             target.AddParticleEffect(
                                 @"particles\units\heroes\hero_beastmaster\beastmaster_wildaxe_glow.vpcf");
@@ -607,50 +525,6 @@ namespace ZeusSharp
                     Effect.Remove(i);
                 }
             }
-
-            #endregion
-
-            #region blinkcd animation
-
-            //if (blink != null && blink.Cooldown > 0)
-            //{
-
-            //    var blinkdr = 60 + (blink.Cooldown * 15);
-            //    Console.WriteLine(blink.Cooldown);
-            //    for (var k = 20; k < 23; k++)
-            //    {
-            //        if (!Effect.TryGetValue(k, out effect))
-            //        {
-            //            effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display_b.vpcf");
-            //            effect.SetControlPoint(1, new Vector3(blinkdr, 0, 0));
-            //            Effect.Add(k, effect);
-            //        }
-            //    }
-            //}
-            //else
-            //{
-            //    cdstore = 0;
-            //    for (var k = 20; k < 23; k++)
-            //    {
-            //        if (Effect.TryGetValue(20, out effect))
-            //        {
-            //            effect.Dispose();
-            //            Effect.Remove(k);
-            //        }
-            //    }
-            //}
-            //if (cdstore > 50 || (blink != null && blink.Cooldown == 0))
-            //{
-            //    for (var k = 20; k < 23; k++)
-            //    {
-            //        if (Effect.TryGetValue(k, out effect))
-            //        {
-            //            effect.Dispose();
-            //            Effect.Remove(k);
-            //        }
-            //    }
-            //    cdstore = 0;
-            //}
 
             #endregion
 
@@ -792,7 +666,7 @@ namespace ZeusSharp
                 return;
 
             var player = ObjectMgr.LocalPlayer;
-            var me = ObjectMgr.LocalHero;
+            me = ObjectMgr.LocalHero;
             if (player == null || player.Team == Team.Observer || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
                 return;
 
@@ -803,23 +677,9 @@ namespace ZeusSharp
                 DrawShadowText("Zeus#: Comboing!", 4, 37, Color.LightBlue, _text);
             }
 
-            //if (toggle && !active)
-            //{
-            //    DrawBox(2, 37, 560, 54, 1, new ColorBGRA(0, 0, 100, 100));
-            //    DrawFilledBox(2, 37, 560, 54, new ColorBGRA(0, 0, 0, 100));
-            //    DrawShadowText("Zeus#: Enabled\nBlink: " + blinkToggle + " | AutoUltiSteal: " + stealToggle + " | Refresher: " + refresherToggle + " | [" + enableKey + "] for combo \n[" + toggleKey + "] for toggle combo | [" + blinkToggleKey + "] for toggle blink | [" + stealToggleKey + "] for toggle AutoUltiSteal | [" + refresherToggleKey + "] for toggle refresher", 4, 37, Color.LawnGreen, _text);
-            //}
-            //if (!toggle)
-            //{
-            //    DrawBox(2, 37, 185, 20, 1, new ColorBGRA(0, 0, 100, 100));
-            //    DrawFilledBox(2, 37, 185, 20, new ColorBGRA(0, 0, 0, 100));
-            //    DrawShadowText("Zeus#: Disabled | [" + toggleKey + "] for toggle", 4, 37, Color.DarkGray, _text);
-            //}
             if (drawStealNotice && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
                 !Menu.Item("stealToggle").GetValue<bool>())
             {
-                //DrawBox(2, 400, 260, 34, 1, new ColorBGRA(0, 0, 100, 100));
-                //DrawFilledBox(2, 400, 260, 34, new ColorBGRA(0, 0, 0, 100));
                 DrawShadowText(
                     "PRESS [" + Menu.Item("confirmSteal").GetValue<KeyBind>().Key + "] FOR STEAL " + steallableHero +
                     "!", 7, 400, Color.Yellow, _notice);
