@@ -447,10 +447,10 @@ namespace ZeusSharp
                             x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                                  x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
                         
-                        Console.WriteLine(enemy.Count);
+                        //Console.WriteLine(enemy.Count);
 
                         killcounter.Add(v, false);
-                        Console.WriteLine(killcounter.Count + "test");
+                        //Console.WriteLine(killcounter.Count + "test");
                         //for (int i = 0; i < enemy.Count; i++) // Loop with for.
                         //{
                         //    if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
@@ -565,10 +565,8 @@ namespace ZeusSharp
 
             if (target != null && target.IsAlive && !target.IsInvul())
             {
-                currenttargeted = target.NetworkName;
-                currenttargeted = currenttargeted.Replace("CDOTA_Unit_Hero_", "");
                 //currenttargeted = Regex.Replace(currenttargeted, @"^\w", m => m.Value.ToUpper());
-                Console.WriteLine(heronametargeted);
+                //Console.WriteLine(heronametargeted);
                 #region text draw
 
                 //var start = HUDInfo.GetHPbarPosition(target) + new Vector2(-HUDInfo.GetHPBarSizeX(target) / 2, -HUDInfo.GetHpBarSizeY(target) * 5);
@@ -587,7 +585,7 @@ namespace ZeusSharp
                 #endregion
 
                 if (Menu.Item("drawtargetglow").GetValue<bool>())
-                    for (var i = 50; i < 53; i++)
+                    for (var i = 50; i < 52; i++)
                     {
                         if (Effect.TryGetValue(i, out scope)) continue;
                         heronametargeted = target.NetworkName;
@@ -602,7 +600,7 @@ namespace ZeusSharp
             }
             if (target == null || !target.IsAlive || target.IsInvul() || !Menu.Item("drawtargetglow").GetValue<bool>() || target.NetworkName.Replace("CDOTA_Unit_Hero_", "") != heronametargeted)
             {
-                for (var i = 50; i < 53; i++)
+                for (var i = 50; i < 52; i++)
                 {
                     if (!Effect.TryGetValue(i, out scope)) continue;
                     scope.Dispose();
