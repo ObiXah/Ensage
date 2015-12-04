@@ -78,8 +78,8 @@ namespace ZeusSharp
                     .SetTooltip(
                         "Increases combo range with blink. P.S. No point in blinking in melee to da face. Shoutout to Evervolv1337 ;)"));
             comboMenu.AddItem(
-                new MenuItem("Wrealrange", "W Non-target Range").SetValue(new Slider(970, 700, 1075))
-                    .SetTooltip("Try to W ground close to enemy giving 1075 max range. Reduce range in case of misses."));
+                new MenuItem("Wrealrange", "W Non-target Range").SetValue(new Slider(950, 700, 1050))
+                    .SetTooltip("Try to W ground close to enemy giving 1050 max range (tooltip sucks, wiki sucks). Reduce range in case of misses."));
 
             var stealMenu = new Menu("Ultimate Usage", "stealmenu", false, "zuus_thundergods_wrath", true);
             stealMenu.AddItem(new MenuItem("stealToggle", "Auto Steal").SetValue(true).SetTooltip("Auto R on killable."));
@@ -206,7 +206,6 @@ namespace ZeusSharp
                     Utils.Sleep(100 + Game.Ping, "qfarm");
                 }
             }
-
             if (Menu.Item("active").GetValue<KeyBind>().Active && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
                 me.CanCast() && me.IsAlive)
             {
@@ -316,7 +315,7 @@ namespace ZeusSharp
                         Utils.SleepCheck("Wnontarget"))
                     {
                         var wPos = (target.Position - me.Position)*
-                                   (me.Distance2D(target) - (Menu.Item("Wrealrange").GetValue<Slider>().Value - 700))/
+                                   (me.Distance2D(target) - (me.Distance2D(target) - 700)) /
                                    me.Distance2D(target) + me.Position;
                         me.Spellbook.Spell2.UseAbility(wPos);
                         Utils.Sleep(70 + Game.Ping, "Wnontarget");
@@ -371,7 +370,7 @@ namespace ZeusSharp
             me = ObjectMgr.LocalHero;
 
             if (Utils.SleepCheck("killstealR") && Game.IsInGame && me != null &&
-                me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus)
+                me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus && me.IsAlive)
             {
                 drawStealNotice = false;
 
