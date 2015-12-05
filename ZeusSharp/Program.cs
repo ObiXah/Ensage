@@ -217,7 +217,6 @@ namespace ZeusSharp
                     var haslinken = target.FindItem("item_sphere");
                     var linkedsph = (haslinken != null && haslinken.Cooldown == 0) ||
                                     (target.Modifiers.Any(x => x.Name == "modifier_item_sphere_target"));
-                    Console.WriteLine(linkedsph.ToString());
                     var targetPos = (target.Position - me.Position)*
                                     (me.Distance2D(target) - Menu.Item("saferange").GetValue<Slider>().Value)/
                                     me.Distance2D(target) + me.Position;
@@ -386,7 +385,7 @@ namespace ZeusSharp
                 damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*vhero.Health;
             var unkillabletarget1 = vhero.Modifiers.Any(
                 x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                     x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
+                     x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift");
             if (vhero.Health > damage - vhero.Level || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() ||
                 vhero.IsInvisible()) me.Stop();
             vhero = null;
@@ -441,7 +440,7 @@ namespace ZeusSharp
                         
                         var unkillabletarget = v.Modifiers.Any(
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                             x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
+                             x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift");
                         
                         if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget && !v.IsInvisible())
                         {
