@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Ensage;
 using Ensage.Common;
 using Ensage.Common.Extensions;
@@ -27,6 +29,7 @@ namespace ZeusSharp
         private static string heronametargeted;
         private static Hero target;
         private static Hero me;
+        private static Hero vhero;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
         private static readonly Menu Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
         private static int[] rDmg = new int[3] { 225, 350, 475 };
@@ -193,7 +196,7 @@ namespace ZeusSharp
                 }
                 foreach (var creep in creepQ.Where(creep => me.Spellbook.SpellQ.CanBeCasted() &&
                                                             creep.Health <=
-                                                            Math.Floor((qDmg[qlvl] + eDmg[elvl]*0.01*creep.Health)*(1 - creep.MagicDamageResist)) &&
+                                                            Math.Floor((qDmg[qlvl] + eDmg[elvl] * 0.01 * creep.Health) * (1 - creep.MagicDamageResist)) &&
                                                             creep.Team != me.Team).Where(creep => me.Spellbook.SpellQ.CanBeCasted() && creep.Position.Distance2D(me.Position) <= 850 &&
                                                                                                   Utils.SleepCheck("qfarm")))
                 {
@@ -211,6 +214,10 @@ namespace ZeusSharp
             {
                 if (target != null && target.IsAlive && !target.IsInvul())
                 {
+                    var haslinken = target.FindItem("item_sphere");
+                    var linkedsph = (haslinken != null && haslinken.Cooldown == 0) ||
+                                    (target.Modifiers.Any(x => x.Name == "modifier_item_sphere_target"));
+                    Console.WriteLine(linkedsph.ToString());
                     var targetPos = (target.Position - me.Position)*
                                     (me.Distance2D(target) - Menu.Item("saferange").GetValue<Slider>().Value)/
                                     me.Distance2D(target) + me.Position;
@@ -246,7 +253,7 @@ namespace ZeusSharp
                         Utils.Sleep(Game.Ping, "arcane");
                     }
 
-                    if (sheepstick != null && sheepstick.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
+                    if (sheepstick != null && sheepstick.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("sheepstick"))
                     {
                         sheepstick.UseAbility(target);
@@ -267,7 +274,7 @@ namespace ZeusSharp
                         Utils.Sleep(Game.Ping, "veil");
                     }
 
-                    if (ethereal != null && ethereal.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
+                    if (ethereal != null && ethereal.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("ethereal"))
                     {
                         ethereal.UseAbility(target);
@@ -276,7 +283,7 @@ namespace ZeusSharp
 
                     Utils.ChainStun(me, 100, null, false);
 
-                    if (dagon != null && dagon.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
+                    if (dagon != null && dagon.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("dagon"))
                     {
                         dagon.UseAbility(target);
@@ -292,16 +299,14 @@ namespace ZeusSharp
 
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion &&
-                        Utils.SleepCheck("Q") &&
-                        (!me.Spellbook.Spell2.CanBeCasted() ||
-                         me.Distance2D(target) > Menu.Item("Wrealrange").GetValue<Slider>().Value) && me.Mana > manaForQ)
+                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ)
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
                         Utils.Sleep(150 + Game.Ping, "Q");
                     }
 
                     if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < 700) &&
-                        me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost &&
+                        me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph &&
                         !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W"))
                     {
                         me.Spellbook.Spell2.UseAbility(target);
@@ -311,7 +316,7 @@ namespace ZeusSharp
                     if (me.Spellbook.Spell2 != null &&
                         (me.Distance2D(target) < Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() &&
-                        me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion &&
+                        me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("Wnontarget"))
                     {
                         var wPos = (target.Position - me.Position)*
@@ -365,6 +370,28 @@ namespace ZeusSharp
             }
         }
 
+        public static void cancelult()
+        {
+            me = ObjectMgr.LocalHero;
+            if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
+            {
+                rDmg = new int[3] {440, 540, 640};
+            }
+            else
+            {
+                rDmg = new int[3] {225, 350, 475};
+            }
+            var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - vhero.MagicDamageResist));
+            if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < 1200)
+                damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*vhero.Health;
+            var unkillabletarget1 = vhero.Modifiers.Any(
+                x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
+                     x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
+            if (vhero.Health > damage - vhero.Level || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() ||
+                vhero.IsInvisible()) me.Stop();
+            vhero = null;
+        }
+
         public static void Killsteal(EventArgs args)
         {
             me = ObjectMgr.LocalHero;
@@ -413,10 +440,10 @@ namespace ZeusSharp
                             damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*v.Health;
                         
                         var unkillabletarget = v.Modifiers.Any(
-                            x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                                 x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
+                        x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
+                             x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison");
                         
-                        if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget)
+                        if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget && !v.IsInvisible())
                         {
                             drawStealNotice = true;
 
@@ -452,7 +479,9 @@ namespace ZeusSharp
                                 if (me.Mana > me.Spellbook.Spell4.ManaCost)
                                 {
                                     me.Spellbook.Spell4.UseAbility();
-                                    Utils.Sleep(300, "killstealR");
+                                    vhero = v;
+                                    DelayAction.Add(385, cancelult);
+                                    Utils.Sleep(400, "killstealR");
                                 }
                             }
                         }
