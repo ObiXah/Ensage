@@ -385,7 +385,9 @@ namespace ZeusSharp
                 damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*vhero.Health;
             var unkillabletarget1 = vhero.Modifiers.Any(
                 x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                     x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift");
+                     x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
+                     x.Name == "modifier_puck_phase_shift" ||
+                     x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone");
             if (vhero.Health > damage - vhero.Level || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() ||
                 vhero.IsInvisible()) me.Stop();
             vhero = null;
@@ -413,7 +415,7 @@ namespace ZeusSharp
                     ((!Menu.Item("active").GetValue<KeyBind>().Active && Menu.Item("useRincombo").GetValue<bool>()) ||
                      !Menu.Item("useRincombo").GetValue<bool>() ||
                      !Menu.Item("stealToggle").GetValue<bool>()) &&
-                    me.Spellbook.Spell4.Cooldown == 0 && me.Spellbook.Spell4.Level > 0
+                     me.Spellbook.Spell4.Level > 0 && me.Spellbook.Spell4.Cooldown == 0
                     )
                 {
                     var enemy =
@@ -440,8 +442,9 @@ namespace ZeusSharp
                         
                         var unkillabletarget = v.Modifiers.Any(
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                             x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift");
-                        
+                             x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
+                             x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone");
+                        //Console.WriteLine(unkillabletarget.ToString());
                         if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget && !v.IsInvisible())
                         {
                             drawStealNotice = true;
