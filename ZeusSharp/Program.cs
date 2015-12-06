@@ -224,7 +224,7 @@ namespace ZeusSharp
                         blink != null &&
                         blink.CanBeCasted() &&
                         (me.Distance2D(target) < 1200 + Menu.Item("saferange").GetValue<Slider>().Value) &&
-                        (me.Distance2D(target) > Menu.Item("saferange").GetValue<Slider>().Value + 125) &&
+                        (me.Distance2D(target) > Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
                         Utils.SleepCheck("blink1") && Menu.Item("blink").GetValue<bool>()
                         )
                     {
@@ -234,10 +234,7 @@ namespace ZeusSharp
 
                     Utils.Sleep(me.GetTurnTime(target), "blink");
 
-                    if (soulring != null && me.Health > 300 &&
-                        (me.Mana < me.Spellbook.Spell2.ManaCost ||
-                         (me.Mana < refresherComboManacost && Menu.Item("refresherToggle").GetValue<bool>() &&
-                          refresher.CanBeCasted())) && soulring.CanBeCasted() && Utils.SleepCheck("soulring"))
+                    if (soulring != null && me.MaximumHealth*0.4 > me.Health && Utils.SleepCheck("soulring"))
                     {
                         soulring.UseAbility();
                         Utils.Sleep(Game.Ping, "soulring");
@@ -259,7 +256,7 @@ namespace ZeusSharp
                         Utils.Sleep(Game.Ping, "sheepstick");
                     }
 
-                    if (orchid != null && orchid.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
+                    if (orchid != null && orchid.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         !target.IsHexed() && Utils.SleepCheck("orchid"))
                     {
                         orchid.UseAbility(target);
@@ -388,8 +385,8 @@ namespace ZeusSharp
                      x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
                      x.Name == "modifier_puck_phase_shift" ||
                      x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone");
-            if (vhero.Health > damage - vhero.Level || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() ||
-                vhero.IsInvisible()) me.Stop();
+            if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() ||
+                (vhero.IsInvisible() && !vhero.IsVisible)) me.Stop();
             vhero = null;
         }
 
@@ -444,8 +441,7 @@ namespace ZeusSharp
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                              x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
                              x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone");
-                        //Console.WriteLine(unkillabletarget.ToString());
-                        if (v.Health < damage - v.Level && v != null && !v.IsIllusion && !unkillabletarget && !v.IsInvisible())
+                        if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
 
