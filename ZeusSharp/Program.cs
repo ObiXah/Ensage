@@ -265,7 +265,7 @@ namespace ZeusSharp
                         Utils.Sleep(Game.Ping, "arcane");
                     }
 
-                    if (sheepstick != null && sheepstick.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
+                    if (sheepstick != null && sheepstick.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph && !target.IsHexed() && !target.IsStunned() &&
                         Utils.SleepCheck("sheepstick"))
                     {
                         sheepstick.UseAbility(target);
@@ -348,8 +348,8 @@ namespace ZeusSharp
                     if (
                         (
                             !(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) ||
-                            target.IsMagicImmune() || me.IsSilenced() || !ghostform
-                            ) &&
+                            target.IsMagicImmune() || me.IsSilenced()
+                            ) && !ghostform &&
                         me.CanAttack() &&
                         (Menu.Item("dforceAA").GetValue<bool>() || me.Distance2D(target) < 350) &&
                         target != null &&
@@ -360,7 +360,7 @@ namespace ZeusSharp
                         Utils.Sleep(50 + Game.Ping, "attack");
                     }
                     else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") &&
-                             !Menu.Item("dforceAA").GetValue<bool>() && me.Distance2D(target) > 350)
+                             !Menu.Item("dforceAA").GetValue<bool>() && (me.Distance2D(target) > 350 || ghostform))
                     {
                         me.Move(Game.MousePosition);
                         Utils.Sleep(50 + Game.Ping, "movesleep");
