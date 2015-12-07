@@ -144,6 +144,18 @@ namespace ZeusSharp
                 Menu.AddToMainMenu();
             }
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
+            var enemylist =
+                ObjectMgr.GetEntities<Hero>()
+                    .Where(
+                        e =>
+                            e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
+                            !e.UnitState.HasFlag(UnitState.MagicImmune) && e.IsChanneling());
+            foreach (var channeling in enemylist)
+            {
+                if (me.Distance2D(channeling) < Menu.Item("Wrealrange").GetValue<Slider>().Value)
+                    target = channeling;
+                else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
+            }
 
             // Items
             orchid = me.FindItem("item_orchid");
@@ -245,10 +257,8 @@ namespace ZeusSharp
                         )
                     {
                         blink.UseAbility(targetPos);
-                        Utils.Sleep(Game.Ping, "blink1");
+                        Utils.Sleep(me.GetTurnTime(targetPos) + Game.Ping*2, "blink1");
                     }
-
-                    Utils.Sleep(me.GetTurnTime(target), "blink");
 
                     if (soulring != null && me.MaximumHealth*0.4 > me.Health && Utils.SleepCheck("soulring"))
                     {
@@ -315,13 +325,13 @@ namespace ZeusSharp
                         shiva.UseAbility();
                         Utils.Sleep(Game.Ping, "shiva");
                     }
-
+                    
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion &&
                         Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
-                        Utils.Sleep(150 + Game.Ping, "Q");
+                        Utils.Sleep(200 + Game.Ping, "Q");
                     }
 
                     if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < 700) &&
@@ -329,20 +339,20 @@ namespace ZeusSharp
                         !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
                     {
                         me.Spellbook.Spell2.UseAbility(target);
-                        Utils.Sleep(200 + Game.Ping, "W");
+                        Utils.Sleep(400 + Game.Ping, "W");
                     }
 
                     if (me.Spellbook.Spell2 != null &&
                         (me.Distance2D(target) < Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
-                        Utils.SleepCheck("Wnontarget") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
+                        Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
                     {
                         var wPos = (target.Position - me.Position)*
                                    (me.Distance2D(target) - (me.Distance2D(target) - 700)) /
                                    me.Distance2D(target) + me.Position;
                         me.Spellbook.Spell2.UseAbility(wPos);
-                        Utils.Sleep(70 + Game.Ping, "Wnontarget");
+                        Utils.Sleep(400 + Game.Ping, "W");
                     }
 
                     if (
