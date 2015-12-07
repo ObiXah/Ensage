@@ -325,7 +325,7 @@ namespace ZeusSharp
                     
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion &&
-                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
+                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform))
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
                         Utils.Sleep(200 + Game.Ping, "Q");
@@ -333,7 +333,7 @@ namespace ZeusSharp
 
                     if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < 700) &&
                         me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph &&
-                        !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
+                        !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength - 1.5 || ghostform || target.IsChanneling()))
                     {
                         me.Spellbook.Spell2.UseAbility(target);
                         Utils.Sleep(400 + Game.Ping, "W");
@@ -343,7 +343,7 @@ namespace ZeusSharp
                         (me.Distance2D(target) < Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
-                        Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
+                        Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform || target.IsChanneling()))
                     {
                         var wPos = (target.Position - me.Position)*
                                    (me.Distance2D(target) - (me.Distance2D(target) - 700)) /
