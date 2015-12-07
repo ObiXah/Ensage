@@ -16,7 +16,7 @@ namespace ZeusSharp
 {
     internal class Program
     {
-        private static Item orchid, sheepstick, veil, soulring, arcane, blink, shiva, dagon, refresher, ethereal;
+        private static Item orchid, sheepstick, veil, soulring, arcane, blink, shiva, dagon, refresher, ethereal, halberd;
         private static bool drawStealNotice;
         private static bool menuadded;
         private static readonly int manaForQ = 235;
@@ -153,6 +153,7 @@ namespace ZeusSharp
             arcane = me.FindItem("item_arcane_boots");
             blink = me.FindItem("item_blink");
             shiva = me.FindItem("item_shivas_guard");
+            halberd = me.FindItem("item_heavens_halberd");
             dagon = me.Inventory.Items.FirstOrDefault(item => item.Name.Contains("item_dagon"));
             refresher = me.FindItem("item_refresher");
             ethereal = me.FindItem("item_ethereal_blade");
@@ -169,6 +170,18 @@ namespace ZeusSharp
 
             if (sheepstick != null)
                 refresherComboManacost += sheepstick.ManaCost;
+
+            if (shiva != null)
+                refresherComboManacost += shiva.ManaCost;
+
+            if (halberd  != null)
+                refresherComboManacost += halberd.ManaCost;
+
+            if (dagon != null)
+                refresherComboManacost += dagon.ManaCost;
+
+            if (ethereal != null)
+                refresherComboManacost += ethereal.ManaCost;
 
             if (refresher != null)
                 refresherComboManacost += refresher.ManaCost;
@@ -220,6 +233,9 @@ namespace ZeusSharp
                     var targetPos = (target.Position - me.Position)*
                                     (me.Distance2D(target) - Menu.Item("saferange").GetValue<Slider>().Value)/
                                     me.Distance2D(target) + me.Position;
+                    var ghostform = target.Modifiers.Any(x => x.Name == "modifier_ghost_state" ||
+                                                              x.Name == "modifier_item_ethereal_blade_ethereal" ||
+                                                              x.Name == "modifier_pugna_decrepify");
                     if (
                         blink != null &&
                         blink.CanBeCasted() &&
@@ -277,16 +293,23 @@ namespace ZeusSharp
                         Utils.Sleep(Game.Ping, "ethereal");
                     }
 
+                    if (halberd != null && halberd.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
+                        Utils.SleepCheck("halberd"))
+                    {
+                        halberd.UseAbility(target);
+                        Utils.Sleep(Game.Ping, "halberd");
+                    }
+
                     Utils.ChainStun(me, 100, null, false);
 
-                    if (dagon != null && dagon.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
+                    if (dagon != null && dagon.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) &&
                         Utils.SleepCheck("dagon"))
                     {
                         dagon.UseAbility(target);
                         Utils.Sleep(Game.Ping, "dagon");
                     }
 
-                    if (shiva != null && shiva.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
+                    if (shiva != null && shiva.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && me.Distance2D(target) < 850 &&
                         Utils.SleepCheck("shiva"))
                     {
                         shiva.UseAbility();
@@ -295,7 +318,7 @@ namespace ZeusSharp
 
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion &&
-                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ)
+                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
                         Utils.Sleep(150 + Game.Ping, "Q");
@@ -303,7 +326,7 @@ namespace ZeusSharp
 
                     if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < 700) &&
                         me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph &&
-                        !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W"))
+                        !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
                     {
                         me.Spellbook.Spell2.UseAbility(target);
                         Utils.Sleep(200 + Game.Ping, "W");
@@ -313,7 +336,7 @@ namespace ZeusSharp
                         (me.Distance2D(target) < Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
-                        Utils.SleepCheck("Wnontarget"))
+                        Utils.SleepCheck("Wnontarget") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform))
                     {
                         var wPos = (target.Position - me.Position)*
                                    (me.Distance2D(target) - (me.Distance2D(target) - 700)) /
@@ -325,7 +348,7 @@ namespace ZeusSharp
                     if (
                         (
                             !(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) ||
-                            target.IsMagicImmune() || me.IsSilenced()
+                            target.IsMagicImmune() || me.IsSilenced() || !ghostform
                             ) &&
                         me.CanAttack() &&
                         (Menu.Item("dforceAA").GetValue<bool>() || me.Distance2D(target) < 350) &&
@@ -343,16 +366,23 @@ namespace ZeusSharp
                         Utils.Sleep(50 + Game.Ping, "movesleep");
                     }
                     if (Menu.Item("refresherToggle").GetValue<bool>() && !target.IsMagicImmune() && refresher != null &&
-                        refresher.CanBeCasted() && me.Spellbook.Spell4.CanBeCasted() &&
+                        refresher.CanBeCasted() && me.Spellbook.Spell4.CanBeCasted() && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) && 
                         Utils.SleepCheck("ultiRefresher"))
                     {
                         me.Spellbook.Spell4.UseAbility();
                         Utils.Sleep(100 + Game.Ping, "ultiRefresher");
                     }
 
-                    if (Menu.Item("refresherToggle").GetValue<bool>() && refresher != null && refresher.CanBeCasted() &&
+                    if (Menu.Item("refresherToggle").GetValue<bool>() && refresher != null && refresher.CanBeCasted() && me.Mana > refresherComboManacost &&
                         Utils.SleepCheck("refresher") && !target.IsMagicImmune() && target != null &&
-                        !me.Spellbook.Spell4.CanBeCasted() && !me.Spellbook.Spell2.CanBeCasted())
+                        !me.Spellbook.Spell4.CanBeCasted() && !me.Spellbook.Spell2.CanBeCasted() &&
+                        (orchid == null || orchid.Cooldown > 0) &&
+                        (sheepstick == null || sheepstick.Cooldown > 0) &&
+                        (veil == null || veil.Cooldown > 0) &&
+                        (shiva == null || shiva.Cooldown > 0) &&
+                        (halberd == null || halberd.Cooldown > 0) &&
+                        (dagon == null || dagon.Cooldown > 0) &&
+                        (ethereal == null || ethereal.Cooldown > 0))
                     {
                         refresher.UseAbility();
                         Utils.Sleep(300 + Game.Ping, "refresher");
@@ -377,16 +407,19 @@ namespace ZeusSharp
             {
                 rDmg = new int[3] {225, 350, 475};
             }
+            var momd = vhero.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
             var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - vhero.MagicDamageResist));
             if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < 1200)
                 damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*vhero.Health;
+            if (momd) damage = damage*1.3;
             var unkillabletarget1 = vhero.Modifiers.Any(
                 x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                      x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
                      x.Name == "modifier_puck_phase_shift" ||
-                     x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone");
-            if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() ||
-                (vhero.IsInvisible() && !vhero.IsVisible)) me.Stop();
+                     x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
+                     x.Name == "modifier_item_aegis");
+
+            if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune()) me.Stop();
             vhero = null;
         }
 
@@ -436,11 +469,13 @@ namespace ZeusSharp
                         var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - v.MagicDamageResist));
                         if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1200)
                             damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*v.Health;
-                        
+                        var momed = v.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
+                        if (momed) damage = damage*1.3;
                         var unkillabletarget = v.Modifiers.Any(
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                              x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
-                             x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone");
+                             x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
+                             x.Name == "modifier_item_aegis");
                         if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
