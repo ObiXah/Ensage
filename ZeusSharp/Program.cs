@@ -520,6 +520,11 @@ namespace ZeusSharp
                                 }
                                 if (me.Mana > me.Spellbook.Spell4.ManaCost)
                                 {
+                                    if (soulring != null && soulring.CanBeCasted() && Utils.SleepCheck("soulring") && me.Health > me.MaximumHealth * 0.4)
+                                    {
+                                        soulring.UseAbility();
+                                        Utils.Sleep(Game.Ping, "soulring");
+                                    }  
                                     me.Spellbook.Spell4.UseAbility();
                                     vhero = v;
                                     DelayAction.Add(385, cancelult);
