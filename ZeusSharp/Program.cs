@@ -149,7 +149,7 @@ namespace ZeusSharp
                             !e.UnitState.HasFlag(UnitState.MagicImmune) && e.IsChanneling());
             foreach (var channeling in enemylist)
             {
-                if (me.Distance2D(channeling) < Menu.Item("Wrealrange").GetValue<Slider>().Value)
+                if (me.Distance2D(channeling) < Menu.Item("Wrealrange").GetValue<Slider>().Value && channeling.GetChanneledAbility().ChannelTime() > 1)
                     target = channeling;
                 else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
             }
@@ -276,35 +276,35 @@ namespace ZeusSharp
                         Utils.SleepCheck("sheepstick"))
                     {
                         sheepstick.UseAbility(target);
-                        Utils.Sleep(Game.Ping, "sheepstick");
+                        Utils.Sleep(50+Game.Ping, "sheepstick");
                     }
 
                     if (orchid != null && orchid.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         !target.IsHexed() && Utils.SleepCheck("orchid"))
                     {
                         orchid.UseAbility(target);
-                        Utils.Sleep(Game.Ping, "orchid");
+                        Utils.Sleep(50+Game.Ping, "orchid");
                     }
 
                     if (veil != null && veil.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
                         Utils.SleepCheck("veil"))
                     {
                         veil.UseAbility(target.Position);
-                        Utils.Sleep(Game.Ping, "veil");
+                        Utils.Sleep(50+Game.Ping, "veil");
                     }
 
                     if (ethereal != null && ethereal.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("ethereal"))
                     {
                         ethereal.UseAbility(target);
-                        Utils.Sleep(Game.Ping, "ethereal");
+                        Utils.Sleep(50+Game.Ping, "ethereal");
                     }
 
                     if (halberd != null && halberd.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("halberd"))
                     {
                         halberd.UseAbility(target);
-                        Utils.Sleep(Game.Ping, "halberd");
+                        Utils.Sleep(50+Game.Ping, "halberd");
                     }
 
                     Utils.ChainStun(me, 100, null, false);
@@ -313,14 +313,14 @@ namespace ZeusSharp
                         Utils.SleepCheck("dagon"))
                     {
                         dagon.UseAbility(target);
-                        Utils.Sleep(Game.Ping, "dagon");
+                        Utils.Sleep(50+Game.Ping, "dagon");
                     }
 
                     if (shiva != null && shiva.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && me.Distance2D(target) < 850 &&
                         Utils.SleepCheck("shiva"))
                     {
                         shiva.UseAbility();
-                        Utils.Sleep(Game.Ping, "shiva");
+                        Utils.Sleep(50+Game.Ping, "shiva");
                     }
                     
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
@@ -424,7 +424,7 @@ namespace ZeusSharp
                      x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
                      x.Name == "modifier_puck_phase_shift" ||
                      x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                     x.Name == "modifier_item_aegis");
+                     x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance");
 
             if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune()) me.Stop();
             vhero = null;
@@ -482,7 +482,7 @@ namespace ZeusSharp
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                              x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
                              x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                             x.Name == "modifier_item_aegis");
+                             x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance");
                         if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
