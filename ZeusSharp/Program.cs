@@ -219,16 +219,18 @@ namespace ZeusSharp
                 foreach (var creep in creepQ.Where(creep => me.Spellbook.SpellQ.CanBeCasted() &&
                                                             creep.Health <=
                                                             Math.Floor((qDmg[qlvl] + eDmg[elvl] * 0.01 * creep.Health) * (1 - creep.MagicDamageResist)) &&
-                                                            creep.Team != me.Team).Where(creep => me.Spellbook.SpellQ.CanBeCasted() && creep.Position.Distance2D(me.Position) <= 850 &&
-                                                                                                  Utils.SleepCheck("qfarm")))
+                                                            creep.Team != me.Team).Where(creep => me.Spellbook.SpellQ.CanBeCasted() && creep.Position.Distance2D(me.Position) <= 850))
                 {
-                    if (soulring != null && soulring.CanBeCasted() && me.Health >= 400)
+                    if (soulring != null && soulring.CanBeCasted() && me.Health >= 400 && Utils.SleepCheck("soulring1"))
                     {
                         soulring.UseAbility();
+                        Utils.Sleep(Game.Ping, "soulring1");
                     }
-                    else
+                    if (me.Spellbook.SpellQ.CanBeCasted() && Utils.SleepCheck("qfarm"))
+                    {
                         me.Spellbook.SpellQ.UseAbility(creep);
-                    Utils.Sleep(100 + Game.Ping, "qfarm");
+                        Utils.Sleep(50 + Game.Ping, "qfarm");
+                    }
                 }
             }
             if (Menu.Item("active").GetValue<KeyBind>().Active && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
