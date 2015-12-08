@@ -426,7 +426,7 @@ namespace ZeusSharp
                      x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
                      x.Name == "modifier_puck_phase_shift" ||
                      x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                     x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance");
+                     x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard");
 
             if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune()) me.Stop();
             vhero = null;
@@ -484,7 +484,7 @@ namespace ZeusSharp
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                              x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
                              x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                             x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance");
+                             x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard");
                         if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
