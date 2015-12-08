@@ -257,7 +257,7 @@ namespace ZeusSharp
                         Utils.Sleep(me.GetTurnTime(targetPos) + Game.Ping*2, "blink1");
                     }
 
-                    if (soulring != null && me.MaximumHealth*0.4 > me.Health && Utils.SleepCheck("soulring"))
+                    if (soulring != null && soulring.CanBeCasted() && me.Health > me.MaximumHealth * 0.4 && Utils.SleepCheck("soulring"))
                     {
                         soulring.UseAbility();
                         Utils.Sleep(Game.Ping, "soulring");
