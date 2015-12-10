@@ -153,9 +153,6 @@ namespace ZeusSharp
                     target = channeling;
                 else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
             }
-            if (target.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" && target.Spellbook.SpellR.CanBeCasted())
-                Console.WriteLine("true");
-            else Console.WriteLine("false");
             // Items
             orchid = me.FindItem("item_orchid");
             sheepstick = me.FindItem("item_sheepstick");
