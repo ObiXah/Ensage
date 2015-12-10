@@ -512,7 +512,7 @@ namespace ZeusSharp
                         {
                             drawStealNotice = true;
 
-                            steallableHero = v.NetworkName;
+                            steallableHero = v.NetworkName.Replace("CDOTA_Unit_Hero_", "").ToUpper();
 
                             if (
                                 (Menu.Item("confirmSteal").GetValue<KeyBind>().Active ||
