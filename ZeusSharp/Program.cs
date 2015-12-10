@@ -153,7 +153,9 @@ namespace ZeusSharp
                     target = channeling;
                 else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
             }
-
+            if (target.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" && target.Spellbook.SpellR.CanBeCasted())
+                Console.WriteLine("true");
+            else Console.WriteLine("false");
             // Items
             orchid = me.FindItem("item_orchid");
             sheepstick = me.FindItem("item_sheepstick");
@@ -476,10 +478,23 @@ namespace ZeusSharp
                     foreach (var v in enemy)
                     {
                         var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - v.MagicDamageResist));
-                        if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1200)
-                            damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*v.Health;
+                        if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1150)
+                            damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * v.Health * (1 - v.MagicDamageResist);
+                        if (v.NetworkName == "CDOTA_Unit_Hero_Spectre" && v.Spellbook.Spell3.Level > 0)
+                        {
+                            damage =
+                                Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*
+                                           (1 - (0.10 + v.Spellbook.Spell3.Level*0.04))*(1 - v.MagicDamageResist));
+                            if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1150)
+                                damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * v.Health * (1 - v.MagicDamageResist);
+                        }
+                        if (v.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
+                            v.Spellbook.SpellR.CanBeCasted())
+                            damage = 0;
                         var momed = v.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
                         if (momed) damage = damage*1.3;
+
+                        
                         var unkillabletarget = v.Modifiers.Any(
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                              x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
@@ -489,7 +504,7 @@ namespace ZeusSharp
                         {
                             drawStealNotice = true;
 
-                            steallableHero = v.NetworkName.Replace("CDOTA_Unit_Hero_", "").ToUpper();
+                            steallableHero = v.NetworkName;
 
                             if (
                                 (Menu.Item("confirmSteal").GetValue<KeyBind>().Active ||
