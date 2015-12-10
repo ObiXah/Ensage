@@ -418,7 +418,18 @@ namespace ZeusSharp
             var momd = vhero.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
             var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - vhero.MagicDamageResist));
             if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < 1200)
-                damage = damage + eDmg[me.Spellbook.Spell3.Level]*0.01*vhero.Health;
+                damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * vhero.Health * (1 - vhero.MagicDamageResist);
+            if (vhero.NetworkName == "CDOTA_Unit_Hero_Spectre" && vhero.Spellbook.Spell3.Level > 0)
+            {
+                damage =
+                    Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1] *
+                               (1 - (0.10 + vhero.Spellbook.Spell3.Level * 0.04)) * (1 - vhero.MagicDamageResist));
+                if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < 1150)
+                    damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * vhero.Health * (1 - vhero.MagicDamageResist);
+            }
+            if (vhero.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
+                vhero.Spellbook.SpellR.CanBeCasted())
+                damage = 0;
             if (momd) damage = damage*1.3;
             var unkillabletarget1 = vhero.Modifiers.Any(
                 x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
