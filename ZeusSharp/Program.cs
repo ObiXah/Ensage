@@ -430,13 +430,20 @@ namespace ZeusSharp
             if (vhero.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                 vhero.Spellbook.SpellR.CanBeCasted())
                 damage = 0;
+            if (vhero.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
+                vhero.Spellbook.SpellQ.Cooldown != 0)
+                damage = 0;
+            var kunkkarum = vhero.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
+            if (kunkkarum) damage = damage * 0.5;
             if (momd) damage = damage*1.3;
             var unkillabletarget1 = vhero.Modifiers.Any(
                 x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                      x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
                      x.Name == "modifier_puck_phase_shift" ||
                      x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                     x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard");
+                     x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
+                     x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
+                     x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace");
 
             if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune()) me.Stop();
             vhero = null;
@@ -499,15 +506,20 @@ namespace ZeusSharp
                         if (v.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                             v.Spellbook.SpellR.CanBeCasted())
                             damage = 0;
+                        if (v.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
+                            v.Spellbook.SpellQ.Cooldown != 0)
+                            damage = 0;
+                        var kunkkarum = v.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
+                        if (kunkkarum) damage = damage*0.5;
                         var momed = v.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
-                        if (momed) damage = damage*1.3;
-
-                        
+                        if (momed) damage = damage * 1.3;
                         var unkillabletarget = v.Modifiers.Any(
                         x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
                              x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
                              x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                             x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard");
+                             x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
+                             x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
+                             x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace");
                         if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
