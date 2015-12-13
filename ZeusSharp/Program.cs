@@ -108,6 +108,9 @@ namespace ZeusSharp
                 new MenuItem("active", "Combo Key").SetValue(new KeyBind(32, KeyBindType.Press))
                     .SetTooltip("Hold this key for combo."));
             Menu.AddItem(
+                new MenuItem("harass", "Harass Key").SetValue(new KeyBind('D', KeyBindType.Press))
+                    .SetTooltip("Hold this key for harass. Not uses blink, refresher, hex, halberd, shiva."));
+            Menu.AddItem(
                 new MenuItem("qFarm", "Farm Key").SetValue(new KeyBind('F', KeyBindType.Press))
                     .SetTooltip("Hold this key to farm with Q."));
 
@@ -152,6 +155,21 @@ namespace ZeusSharp
                 if (me.Distance2D(channeling) < Menu.Item("Wrealrange").GetValue<Slider>().Value && channeling.GetChanneledAbility().ChannelTime() > 1)
                     target = channeling;
                 else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
+            }
+            if (target != null && target.IsMagicImmune())
+            {
+                var enemylist2 =
+                    ObjectMgr.GetEntities<Hero>()
+                        .Where(
+                            e =>
+                                e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
+                                !e.UnitState.HasFlag(UnitState.MagicImmune));
+                foreach (var viable in enemylist2)
+                {
+                    if (me.Distance2D(viable) < Menu.Item("Wrealrange").GetValue<Slider>().Value)
+                        target = viable;
+                    else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
+                }
             }
             // Items
             orchid = me.FindItem("item_orchid");
@@ -231,7 +249,7 @@ namespace ZeusSharp
                     }
                 }
             }
-            if (Menu.Item("active").GetValue<KeyBind>().Active && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active && me.IsAlive)
+            if ((Menu.Item("active").GetValue<KeyBind>().Active || Menu.Item("harass").GetValue<KeyBind>().Active) && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active && me.IsAlive)
             {
                 if (target != null && target.IsAlive && !target.IsInvul())
                 {
@@ -244,12 +262,14 @@ namespace ZeusSharp
                     var ghostform = target.Modifiers.Any(x => x.Name == "modifier_ghost_state" ||
                                                               x.Name == "modifier_item_ethereal_blade_ethereal" ||
                                                               x.Name == "modifier_pugna_decrepify");
+
                     if (
                         blink != null &&
                         blink.CanBeCasted() &&
                         (me.Distance2D(target) < 1200 + Menu.Item("saferange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
-                        Utils.SleepCheck("blink1") && Menu.Item("blink").GetValue<bool>()
+                        Utils.SleepCheck("blink1") && Menu.Item("blink").GetValue<bool>() &&
+                        Menu.Item("active").GetValue<KeyBind>().Active
                         )
                     {
                         blink.UseAbility(targetPos);
@@ -272,7 +292,7 @@ namespace ZeusSharp
                     }
 
                     if (sheepstick != null && sheepstick.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph && !target.IsHexed() && !target.IsStunned() &&
-                        Utils.SleepCheck("sheepstick"))
+                        Utils.SleepCheck("sheepstick") && Menu.Item("active").GetValue<KeyBind>().Active)
                     {
                         sheepstick.UseAbility(target);
                         Utils.Sleep(50+Game.Ping, "sheepstick");
@@ -300,7 +320,7 @@ namespace ZeusSharp
                     }
 
                     if (halberd != null && halberd.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
-                        Utils.SleepCheck("halberd"))
+                        Utils.SleepCheck("halberd") && Menu.Item("active").GetValue<KeyBind>().Active)
                     {
                         halberd.UseAbility(target);
                         Utils.Sleep(50+Game.Ping, "halberd");
@@ -316,7 +336,7 @@ namespace ZeusSharp
                     }
 
                     if (shiva != null && shiva.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && me.Distance2D(target) < 850 &&
-                        Utils.SleepCheck("shiva"))
+                        Utils.SleepCheck("shiva") && Menu.Item("active").GetValue<KeyBind>().Active)
                     {
                         shiva.UseAbility();
                         Utils.Sleep(50+Game.Ping, "shiva");
@@ -364,14 +384,14 @@ namespace ZeusSharp
                         me.Attack(target);
                         Utils.Sleep(50 + Game.Ping, "attack");
                     }
-                    else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") && (me.Distance2D(target) >= 350 || !ghostform || !me.CanAttack()))
+                    else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") && (me.Distance2D(target) >= 350 || ghostform || !me.CanAttack()))
                     {
                         me.Move(Game.MousePosition);
                         Utils.Sleep(50 + Game.Ping, "movesleep");
                     }
                     if (Menu.Item("refresherToggle").GetValue<bool>() && !target.IsMagicImmune() && refresher != null &&
-                        refresher.CanBeCasted() && me.Spellbook.Spell4.CanBeCasted() && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) && 
-                        Utils.SleepCheck("ultiRefresher"))
+                        refresher.CanBeCasted() && me.Spellbook.Spell4.CanBeCasted() && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) &&
+                        Utils.SleepCheck("ultiRefresher") && Menu.Item("active").GetValue<KeyBind>().Active)
                     {
                         me.Spellbook.Spell4.UseAbility();
                         Utils.Sleep(100 + Game.Ping, "ultiRefresher");
@@ -386,7 +406,8 @@ namespace ZeusSharp
                         (shiva == null || shiva.Cooldown > 0) &&
                         (halberd == null || halberd.Cooldown > 0) &&
                         (dagon == null || dagon.Cooldown > 0) &&
-                        (ethereal == null || ethereal.Cooldown > 0))
+                        (ethereal == null || ethereal.Cooldown > 0) && 
+                        Menu.Item("active").GetValue<KeyBind>().Active)
                     {
                         refresher.UseAbility();
                         Utils.Sleep(300 + Game.Ping, "refresher");
