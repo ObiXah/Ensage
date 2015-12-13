@@ -152,7 +152,7 @@ namespace ZeusSharp
                             e =>
                                 e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
                                 !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < Menu.Item("Wrealrange").GetValue<Slider>().Value);
-                target = enemylist2.MinOrDefault(x => x.Health);
+                if (enemylist2.Count() != 0) target = enemylist2.MinOrDefault(x => x.Health);
             }
             var enemylist =
                 ObjectMgr.GetEntities<Hero>()
@@ -366,14 +366,9 @@ namespace ZeusSharp
                     }
 
                     if (
-                        (
-                            !(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) ||
-                            target.IsMagicImmune() || !me.CanCast()
-                            ) && !ghostform &&
+                        (!(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) || target.IsMagicImmune() || !me.CanCast()) && !ghostform &&
                         me.CanAttack() && me.Distance2D(target) < 350 &&
-                        target != null &&
-                        Utils.SleepCheck("attack")
-                        )
+                        target != null && Utils.SleepCheck("attack"))
                     {
                         me.Attack(target);
                         Utils.Sleep(50 + Game.Ping, "attack");
