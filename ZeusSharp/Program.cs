@@ -1,6 +1,7 @@
 ﻿﻿
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using Ensage;
 using Ensage.Common;
@@ -27,6 +28,7 @@ namespace ZeusSharp
         private static Hero target;
         private static Hero me;
         private static Hero vhero;
+        private static string map;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
         private static readonly Menu Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
         private static int[] rDmg = new int[3] { 225, 350, 475 };
@@ -139,6 +141,7 @@ namespace ZeusSharp
             {
                 menuadded = true;
                 Menu.AddToMainMenu();
+                map = Game.ShortLevelName;
             }
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
             var enemylist =
@@ -207,7 +210,6 @@ namespace ZeusSharp
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
                             creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
-
             if (Menu.Item("qFarm").GetValue<KeyBind>().Active)
             {
                 if (Utils.SleepCheck("fsleep"))
@@ -457,8 +459,16 @@ namespace ZeusSharp
                 me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus && me.IsAlive)
             {
                 drawStealNotice = false;
-
-                if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
+                if (map == "forest_solo" || map == "desert_duo" || map == "mines_trio" || map =="desert_quintet")
+                    if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
+                    {
+                        rDmg = new int[3] {350, 450, 550};
+                    }
+                    else
+                    {
+                        rDmg = new int[3] {200, 300, 400};
+                    }
+                else if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
                 {
                     rDmg = new int[3] {440, 540, 640};
                 }
@@ -466,7 +476,6 @@ namespace ZeusSharp
                 {
                     rDmg = new int[3] {225, 350, 475};
                 }
-
                 if (
                     ((!Menu.Item("active").GetValue<KeyBind>().Active && Menu.Item("useRincombo").GetValue<bool>()) ||
                      !Menu.Item("useRincombo").GetValue<bool>() ||
