@@ -144,6 +144,16 @@ namespace ZeusSharp
                 map = Game.ShortLevelName;
             }
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
+            if (target != null && target.IsMagicImmune())
+            {
+                var enemylist2 =
+                    ObjectMgr.GetEntities<Hero>()
+                        .Where(
+                            e =>
+                                e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
+                                !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < Menu.Item("Wrealrange").GetValue<Slider>().Value);
+                target = enemylist2.MinOrDefault(x => x.Health);
+            }
             var enemylist =
                 ObjectMgr.GetEntities<Hero>()
                     .Where(
@@ -154,17 +164,6 @@ namespace ZeusSharp
             {
                 if (me.Distance2D(channeling) < Menu.Item("Wrealrange").GetValue<Slider>().Value && channeling.GetChanneledAbility().ChannelTime() > 1)
                     target = channeling;
-                else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
-            }
-            if (target != null && target.IsMagicImmune())
-            {
-                var enemylist2 =
-                    ObjectMgr.GetEntities<Hero>()
-                        .Where(
-                            e =>
-                                e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
-                                !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < Menu.Item("Wrealrange").GetValue<Slider>().Value);
-                target = enemylist2.MinOrDefault(x => x.Health);
             }
             // Items
             orchid = me.FindItem("item_orchid");
