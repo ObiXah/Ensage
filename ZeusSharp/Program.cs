@@ -70,9 +70,6 @@ namespace ZeusSharp
                 new MenuItem("refresherToggle", "Refresher Use").SetValue(false)
                     .SetTooltip("Auto use refresher for 2x ultimate."));
             comboMenu.AddItem(
-                new MenuItem("dforceAA", "Force Auto-Attacks").SetValue(false)
-                    .SetTooltip("Will go for autoattacks even when out of range."));
-            comboMenu.AddItem(
                 new MenuItem("targetsearchrange", "Target Search Range").SetValue(new Slider(1000, 128, 2500))
                     .SetTooltip("Radius of target search range around cursor."));
             comboMenu.AddItem(
@@ -234,8 +231,7 @@ namespace ZeusSharp
                     }
                 }
             }
-            if (Menu.Item("active").GetValue<KeyBind>().Active && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
-                me.CanCast() && me.IsAlive)
+            if (Menu.Item("active").GetValue<KeyBind>().Active && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active && me.IsAlive)
             {
                 if (target != null && target.IsAlive && !target.IsInvul())
                 {
@@ -327,7 +323,7 @@ namespace ZeusSharp
                     }
                     
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
-                        me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion &&
+                        me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && me.CanCast() &&
                         Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform))
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
@@ -335,7 +331,7 @@ namespace ZeusSharp
                     }
 
                     if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < 700) &&
-                        me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph &&
+                        me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph && me.CanCast() &&
                         !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength - 1.5 || ghostform || target.IsChanneling()))
                     {
                         me.Spellbook.Spell2.UseAbility(target);
@@ -344,7 +340,7 @@ namespace ZeusSharp
 
                     if (me.Spellbook.Spell2 != null &&
                         (me.Distance2D(target) < Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
-                        (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() &&
+                        (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() && me.CanCast() &&
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform || target.IsChanneling()))
                     {
@@ -360,8 +356,7 @@ namespace ZeusSharp
                             !(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) ||
                             target.IsMagicImmune() || !me.CanCast()
                             ) && !ghostform &&
-                        me.CanAttack() &&
-                        (Menu.Item("dforceAA").GetValue<bool>() || me.Distance2D(target) < 350) &&
+                        me.CanAttack() && me.Distance2D(target) < 350 &&
                         target != null &&
                         Utils.SleepCheck("attack")
                         )
@@ -369,8 +364,7 @@ namespace ZeusSharp
                         me.Attack(target);
                         Utils.Sleep(50 + Game.Ping, "attack");
                     }
-                    else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") &&
-                             !Menu.Item("dforceAA").GetValue<bool>() && (me.Distance2D(target) > 350 || ghostform || !me.CanCast()))
+                    else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") && (me.Distance2D(target) >= 350 || !ghostform || !me.CanAttack()))
                     {
                         me.Move(Game.MousePosition);
                         Utils.Sleep(50 + Game.Ping, "movesleep");
