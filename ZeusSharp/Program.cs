@@ -163,13 +163,8 @@ namespace ZeusSharp
                         .Where(
                             e =>
                                 e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
-                                !e.UnitState.HasFlag(UnitState.MagicImmune));
-                foreach (var viable in enemylist2)
-                {
-                    if (me.Distance2D(viable) < Menu.Item("Wrealrange").GetValue<Slider>().Value)
-                        target = viable;
-                    else target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
-                }
+                                !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < Menu.Item("Wrealrange").GetValue<Slider>().Value);
+                target = enemylist2.MinOrDefault(x => x.Health);
             }
             // Items
             orchid = me.FindItem("item_orchid");
