@@ -358,7 +358,7 @@ namespace ZeusSharp
                     if (
                         (
                             !(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) ||
-                            target.IsMagicImmune() || me.IsSilenced()
+                            target.IsMagicImmune() || !me.CanCast()
                             ) && !ghostform &&
                         me.CanAttack() &&
                         (Menu.Item("dforceAA").GetValue<bool>() || me.Distance2D(target) < 350) &&
@@ -370,7 +370,7 @@ namespace ZeusSharp
                         Utils.Sleep(50 + Game.Ping, "attack");
                     }
                     else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") &&
-                             !Menu.Item("dforceAA").GetValue<bool>() && (me.Distance2D(target) > 350 || ghostform))
+                             !Menu.Item("dforceAA").GetValue<bool>() && (me.Distance2D(target) > 350 || ghostform || !me.CanCast()))
                     {
                         me.Move(Game.MousePosition);
                         Utils.Sleep(50 + Game.Ping, "movesleep");
