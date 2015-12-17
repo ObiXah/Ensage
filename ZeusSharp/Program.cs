@@ -1,7 +1,6 @@
 ﻿﻿
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using Ensage;
 using Ensage.Common;
@@ -17,8 +16,10 @@ namespace ZeusSharp
         private static Item orchid, sheepstick, veil, soulring, arcane, blink, shiva, dagon, refresher, ethereal, halberd;
         private static bool drawStealNotice;
         private static bool menuadded;
+        private static bool lens;
         private static readonly int manaForQ = 235;
-        private static int Wdrawn;
+        private static int Wdrawn, Qdrawn;
+        private static int Wrange, Qrange, realWrange;
         private static int blinkdrawnr;
         private static Font _text;
         private static Font _notice;
@@ -143,6 +144,19 @@ namespace ZeusSharp
                 Menu.AddToMainMenu();
                 map = Game.ShortLevelName;
             }
+            lens = me.Modifiers.Any(x => x.Name == "modifier_item_aether_lens");
+            if (lens)
+            {
+                Wrange = 900;
+                Qrange = 1050;
+                realWrange = Menu.Item("Wrealrange").GetValue<Slider>().Value + 200;
+            }
+            else
+            {
+                Wrange = 700;
+                Qrange = 850;
+                realWrange = Menu.Item("Wrealrange").GetValue<Slider>().Value;
+            }
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
             if (target != null && target.IsMagicImmune())
             {
@@ -151,7 +165,7 @@ namespace ZeusSharp
                         .Where(
                             e =>
                                 e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
-                                !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < Menu.Item("Wrealrange").GetValue<Slider>().Value);
+                                !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < realWrange);
                 if (enemylist2.Count() != 0) target = enemylist2.MinOrDefault(x => x.Health);
             }
             var enemylist =
@@ -162,9 +176,13 @@ namespace ZeusSharp
                             !e.UnitState.HasFlag(UnitState.MagicImmune) && e.IsChanneling());
             foreach (var channeling in enemylist)
             {
-                if (me.Distance2D(channeling) < Menu.Item("Wrealrange").GetValue<Slider>().Value && channeling.GetChanneledAbility().ChannelTime() > 1)
+                if (me.Distance2D(channeling) < realWrange && channeling.GetChanneledAbility().ChannelTime() > 1)
                     target = channeling;
             }
+            //foreach (var modname in target.Modifiers)
+            //{
+            //    Console.WriteLine(modname.Name);
+            //}
             // Items
             orchid = me.FindItem("item_orchid");
             sheepstick = me.FindItem("item_sheepstick");
@@ -229,7 +247,7 @@ namespace ZeusSharp
                 foreach (var creep in creepQ.Where(creep => me.Spellbook.SpellQ.CanBeCasted() &&
                                                             creep.Health <=
                                                             Math.Floor((qDmg[qlvl] + eDmg[elvl] * 0.01 * creep.Health) * (1 - creep.MagicDamageResist)) &&
-                                                            creep.Team != me.Team).Where(creep => me.Spellbook.SpellQ.CanBeCasted() && creep.Position.Distance2D(me.Position) <= 850))
+                                                            creep.Team != me.Team).Where(creep => me.Spellbook.SpellQ.CanBeCasted() && creep.Position.Distance2D(me.Position) <= Qrange))
                 {
                     if (soulring != null && soulring.CanBeCasted() && me.Health >= 400 && Utils.SleepCheck("soulring1"))
                     {
@@ -261,7 +279,7 @@ namespace ZeusSharp
                         blink != null &&
                         blink.CanBeCasted() &&
                         (me.Distance2D(target) < 1200 + Menu.Item("saferange").GetValue<Slider>().Value) &&
-                        (me.Distance2D(target) > Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
+                        (me.Distance2D(target) > realWrange) &&
                         Utils.SleepCheck("blink1") && Menu.Item("blink").GetValue<bool>() &&
                         Menu.Item("active").GetValue<KeyBind>().Active
                         )
@@ -270,7 +288,7 @@ namespace ZeusSharp
                         Utils.Sleep(me.GetTurnTime(targetPos) + Game.Ping*2, "blink1");
                     }
 
-                    if (soulring != null && soulring.CanBeCasted() && me.Health > me.MaximumHealth * 0.4 && Utils.SleepCheck("soulring"))
+                    if (soulring != null && soulring.CanBeCasted() && me.Health > me.MaximumHealth * 0.4 && Utils.SleepCheck("soulring") && me.Distance2D(target) < realWrange)
                     {
                         soulring.UseAbility();
                         Utils.Sleep(Game.Ping, "soulring");
@@ -344,7 +362,7 @@ namespace ZeusSharp
                         Utils.Sleep(200 + Game.Ping, "Q");
                     }
 
-                    if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < 700) &&
+                    if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < Wrange) &&
                         me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph && me.CanCast() &&
                         !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength - 1.5 || ghostform || target.IsChanneling()))
                     {
@@ -353,13 +371,13 @@ namespace ZeusSharp
                     }
 
                     if (me.Spellbook.Spell2 != null &&
-                        (me.Distance2D(target) < Menu.Item("Wrealrange").GetValue<Slider>().Value) &&
-                        (me.Distance2D(target) > 700) && me.Spellbook.Spell2.CanBeCasted() && me.CanCast() &&
+                        (me.Distance2D(target) < realWrange) &&
+                        (me.Distance2D(target) > Wrange) && me.Spellbook.Spell2.CanBeCasted() && me.CanCast() &&
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform || target.IsChanneling()))
                     {
                         var wPos = (target.Position - me.Position)*
-                                   (me.Distance2D(target) - (me.Distance2D(target) - 700)) /
+                                   (me.Distance2D(target) - (me.Distance2D(target) - Wrange)) /
                                    me.Distance2D(target) + me.Position;
                         me.Spellbook.Spell2.UseAbility(wPos);
                         Utils.Sleep(400 + Game.Ping, "W");
@@ -436,9 +454,10 @@ namespace ZeusSharp
             if (vhero.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                 vhero.Spellbook.SpellR.CanBeCasted())
                 damage = 0;
-            if (vhero.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
-                vhero.Spellbook.SpellQ.Cooldown != 0)
-                damage = 0;
+            //if (vhero.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
+            //    vhero.Spellbook.SpellQ.Cooldown != 0)
+            //    damage = 0;
+            if (lens) damage = damage * 1.08;
             var kunkkarum = vhero.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
             if (kunkkarum) damage = damage * 0.5;
             if (momd) damage = damage*1.3;
@@ -449,7 +468,7 @@ namespace ZeusSharp
                      x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
                      x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
                      x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
-                     x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace");
+                     x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || x.Name == "modifier_templar_assassin_refraction_absorb");
 
             if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune()) me.Stop();
             vhero = null;
@@ -522,6 +541,7 @@ namespace ZeusSharp
                         if (v.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
                             v.Spellbook.SpellQ.Cooldown != 0)
                             damage = 0;
+                        if (lens) damage = damage*1.08;
                         var kunkkarum = v.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
                         if (kunkkarum) damage = damage*0.5;
                         var momed = v.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
@@ -532,7 +552,7 @@ namespace ZeusSharp
                              x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
                              x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
                              x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
-                             x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace");
+                             x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || x.Name == "modifier_templar_assassin_refraction_absorb");
                         if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
@@ -694,9 +714,9 @@ namespace ZeusSharp
 
             #endregion
 
-            if (Menu.Item("Wrealrange").GetValue<Slider>().Value != Wdrawn)
+            if (realWrange != Wdrawn)
             {
-                Wdrawn = Menu.Item("Wrealrange").GetValue<Slider>().Value;
+                Wdrawn = realWrange;
                 if (Effect.TryGetValue(1, out effect))
                 {
                     effect.Dispose();
@@ -705,7 +725,7 @@ namespace ZeusSharp
                 if (!Effect.TryGetValue(1, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    effect.SetControlPoint(1, new Vector3(Menu.Item("Wrealrange").GetValue<Slider>().Value, 0, 0));
+                    effect.SetControlPoint(1, new Vector3(realWrange, 0, 0));
                     Effect.Add(1, effect);
                 }
             }
@@ -715,8 +735,8 @@ namespace ZeusSharp
                 if (!Effect.TryGetValue(1, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    Wdrawn = Menu.Item("Wrealrange").GetValue<Slider>().Value;
-                    effect.SetControlPoint(1, new Vector3(Menu.Item("Wrealrange").GetValue<Slider>().Value, 0, 0));
+                    Wdrawn = realWrange;
+                    effect.SetControlPoint(1, new Vector3(realWrange, 0, 0));
                     Effect.Add(1, effect);
                 }
             }
@@ -726,6 +746,40 @@ namespace ZeusSharp
                 {
                     effect.Dispose();
                     Effect.Remove(1);
+                }
+            }
+
+            if (Qrange != Qdrawn)
+            {
+                Qdrawn = Qrange;
+                if (Effect.TryGetValue(3, out effect))
+                {
+                    effect.Dispose();
+                    Effect.Remove(3);
+                }
+                if (!Effect.TryGetValue(3, out effect))
+                {
+                    effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
+                    effect.SetControlPoint(1, new Vector3(Qrange, 0, 0));
+                    Effect.Add(3, effect);
+                }
+            }
+
+            if (Menu.Item("drawQrange").GetValue<bool>())
+            {
+                if (!Effect.TryGetValue(3, out effect))
+                {
+                    effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
+                    effect.SetControlPoint(1, new Vector3(Qrange, 0, 0));
+                    Effect.Add(3, effect);
+                }
+            }
+            else
+            {
+                if (Effect.TryGetValue(3, out effect))
+                {
+                    effect.Dispose();
+                    Effect.Remove(3);
                 }
             }
 
@@ -764,23 +818,6 @@ namespace ZeusSharp
                 }
             }
 
-            if (Menu.Item("drawQrange").GetValue<bool>())
-            {
-                if (!Effect.TryGetValue(3, out effect))
-                {
-                    effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    effect.SetControlPoint(1, new Vector3(850, 0, 0));
-                    Effect.Add(3, effect);
-                }
-            }
-            else
-            {
-                if (Effect.TryGetValue(3, out effect))
-                {
-                    effect.Dispose();
-                    Effect.Remove(3);
-                }
-            }
         }
 
         private static void Drawing_OnEndScene(EventArgs args)
