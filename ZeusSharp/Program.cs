@@ -17,7 +17,6 @@ namespace ZeusSharp
         private static bool drawStealNotice;
         private static bool menuadded;
         private static bool lens;
-        private static readonly int manaForQ = 235;
         private static int Wdrawn, Qdrawn;
         private static int Wrange, Qrange, realWrange;
         private static int blinkdrawnr;
@@ -356,7 +355,7 @@ namespace ZeusSharp
                     
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && me.CanCast() &&
-                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && me.Mana > manaForQ && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform))
+                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform))
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
                         Utils.Sleep(200 + Game.Ping, "Q");
@@ -386,10 +385,9 @@ namespace ZeusSharp
                     if (
                         (!(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) || target.IsMagicImmune() || !me.CanCast()) && !ghostform &&
                         me.CanAttack() && me.Distance2D(target) < 350 &&
-                        target != null && Utils.SleepCheck("attack"))
+                        target != null)
                     {
-                        me.Attack(target);
-                        Utils.Sleep(50 + Game.Ping, "attack");
+                        Orbwalking.Orbwalk(target);
                     }
                     else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") && (me.Distance2D(target) >= 350 || ghostform || !me.CanAttack()))
                     {
