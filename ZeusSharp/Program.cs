@@ -525,7 +525,7 @@ namespace ZeusSharp
                 if (
                     ((!Menu.Item("active").GetValue<KeyBind>().Active && Menu.Item("useRincombo").GetValue<bool>()) ||
                      !Menu.Item("useRincombo").GetValue<bool>() ||
-                     !Menu.Item("stealToggle").GetValue<bool>()) &&
+                     !Menu.Item("stealToggle").GetValue<KeyBind>().Active) &&
                      me.Spellbook.Spell4.Level > 0 && me.Spellbook.Spell4.Cooldown == 0
                     )
                 {
@@ -581,7 +581,7 @@ namespace ZeusSharp
 
                             if (
                                 (Menu.Item("confirmSteal").GetValue<KeyBind>().Active ||
-                                 Menu.Item("stealToggle").GetValue<bool>()) && !v.IsIllusion)
+                                 Menu.Item("stealToggle").GetValue<KeyBind>().Active) && !v.IsIllusion)
                             {
                                 if (soulring != null && soulring.CanBeCasted() && Utils.SleepCheck("soulring") &&
                                     me.Mana < me.Spellbook.Spell4.ManaCost &&
@@ -885,7 +885,7 @@ namespace ZeusSharp
             }
 
             if (drawStealNotice && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
-                !Menu.Item("stealToggle").GetValue<bool>())
+                !Menu.Item("stealToggle").GetValue<KeyBind>().Active)
             {
                 DrawShadowText(
                     "PRESS [" + Utils.KeyToText(Menu.Item("confirmSteal").GetValue<KeyBind>().Key) + "] FOR STEAL " + steallableHero +
