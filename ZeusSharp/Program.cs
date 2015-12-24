@@ -17,6 +17,7 @@ namespace ZeusSharp
         private static bool drawStealNotice;
         private static bool menuadded;
         private static bool lens;
+        private static bool statechanged;
         private static int Wdrawn, Qdrawn;
         private static int Wrange, Qrange, realWrange;
         private static int blinkdrawnr;
@@ -32,7 +33,8 @@ namespace ZeusSharp
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
         private static readonly Menu Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
         private static int[] rDmg = new int[3] { 225, 350, 475 };
-        private static readonly int[] qDmg = new int[4] {85, 100, 115, 145};
+        private static readonly int[] qDmg = new int[5] {0, 85, 100, 115, 145};
+        private static readonly int[] wDmg = new int[5] {0, 100, 175, 275, 350 };
         private static readonly int[] eDmg = new int[5] {0, 5, 7, 9, 11};
 
         private static void Main()
@@ -61,7 +63,6 @@ namespace ZeusSharp
 
             _line = new Line(Drawing.Direct3DDevice9);
 
-
             var comboMenu = new Menu("Combo Tweaks", "combomenu", false, @"..\other\statpop_exclaim", true);
             comboMenu.AddItem(
                 new MenuItem("blink", "Use Blink").SetValue(true)
@@ -81,7 +82,7 @@ namespace ZeusSharp
                     .SetTooltip("Try to W ground close to enemy giving 1050 max range (tooltip sucks, wiki sucks). Reduce range in case of misses."));
 
             var stealMenu = new Menu("Ultimate Usage", "stealmenu", false, "zuus_thundergods_wrath", true);
-            stealMenu.AddItem(new MenuItem("stealToggle", "Auto Steal").SetValue(true).SetTooltip("Auto R on killable."));
+            stealMenu.AddItem(new MenuItem("stealToggle", "Auto Steal").SetValue(new KeyBind(45, KeyBindType.Toggle)).SetTooltip("Auto R on killable."));
             stealMenu.AddItem(
                 new MenuItem("confirmSteal", "Manual Steal Key").SetValue(new KeyBind('F', KeyBindType.Press))
                     .SetTooltip("Manual R steal key."));
@@ -111,20 +112,22 @@ namespace ZeusSharp
                 new MenuItem("harass", "Harass Key").SetValue(new KeyBind('D', KeyBindType.Press))
                     .SetTooltip("Hold this key for harass. Not uses blink, refresher, hex, halberd, shiva."));
             Menu.AddItem(
-                new MenuItem("qFarm", "Farm Key").SetValue(new KeyBind('F', KeyBindType.Press))
+                new MenuItem("qFarm", "Farm Key").SetValue(new KeyBind('E', KeyBindType.Press))
                     .SetTooltip("Hold this key to farm with Q."));
+            Menu.AddItem(
+                new MenuItem("wFarm", "Lasthit with W").SetValue(true)
+                    .SetTooltip("Siege, neutrals, forge spirits, Lone Druid bear"));
 
             Menu.AddSubMenu(comboMenu);
             Menu.AddSubMenu(stealMenu);
             Menu.AddSubMenu(drawMenu);
-
             Drawing.OnPreReset += Drawing_OnPreReset;
             Drawing.OnPostReset += Drawing_OnPostReset;
             Drawing.OnEndScene += Drawing_OnEndScene;
             Drawing.OnDraw += Drawing_OnDraw;
             AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
+            
         }
-
         public static void Game_OnUpdate(EventArgs args)
         {
             me = ObjectMgr.LocalHero;
@@ -141,6 +144,7 @@ namespace ZeusSharp
             {
                 menuadded = true;
                 Menu.AddToMainMenu();
+                statechanged = true;
                 map = Game.ShortLevelName;
             }
             lens = me.Modifiers.Any(x => x.Name == "modifier_item_aether_lens");
@@ -178,10 +182,6 @@ namespace ZeusSharp
                 if (me.Distance2D(channeling) < realWrange && channeling.GetChanneledAbility().ChannelTime() > 1)
                     target = channeling;
             }
-            //foreach (var modname in target.Modifiers)
-            //{
-            //    Console.WriteLine(modname.Name);
-            //}
             // Items
             orchid = me.FindItem("item_orchid");
             sheepstick = me.FindItem("item_sheepstick");
@@ -222,7 +222,8 @@ namespace ZeusSharp
 
             if (refresher != null)
                 refresherComboManacost += refresher.ManaCost;
-            var qlvl = me.Spellbook.SpellQ.Level - 1;
+            var qlvl = me.Spellbook.SpellQ.Level;
+            var wlvl = me.Spellbook.SpellW.Level;
             var elvl = me.Spellbook.SpellE.Level;
 
             var creepQ =
@@ -236,6 +237,17 @@ namespace ZeusSharp
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
                             creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
+            var creepW =
+                ObjectMgr.GetEntities<Creep>()
+                    .Where(
+                        creep =>
+                            (creep.ClassID != ClassID.CDOTA_BaseNPC_Creep_Lane ||
+                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
+                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
+                             creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
+                             creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
+                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
+                            creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
             if (Menu.Item("qFarm").GetValue<KeyBind>().Active)
             {
                 if (Utils.SleepCheck("fsleep"))
@@ -243,10 +255,10 @@ namespace ZeusSharp
                     me.Move(Game.MousePosition);
                     Utils.Sleep(66 + Game.Ping, "fsleep");
                 }
-                foreach (var creep in creepQ.Where(creep => me.Spellbook.SpellQ.CanBeCasted() &&
-                                                            creep.Health <=
+                foreach (var creep in creepQ.Where(creep => creep.Health <=
                                                             Math.Floor((qDmg[qlvl] + eDmg[elvl] * 0.01 * creep.Health) * (1 - creep.MagicDamageResist)) &&
-                                                            creep.Team != me.Team).Where(creep => me.Spellbook.SpellQ.CanBeCasted() && creep.Position.Distance2D(me.Position) <= Qrange))
+                                                            creep.Team != me.Team).Where(creep => (me.Spellbook.SpellQ.Level > 0 && 
+                                                            me.Spellbook.SpellQ.Cooldown == 0) && creep.Position.Distance2D(me.Position) <= Qrange))
                 {
                     if (soulring != null && soulring.CanBeCasted() && me.Health >= 400 && Utils.SleepCheck("soulring1"))
                     {
@@ -256,7 +268,27 @@ namespace ZeusSharp
                     if (me.Spellbook.SpellQ.CanBeCasted() && Utils.SleepCheck("qfarm"))
                     {
                         me.Spellbook.SpellQ.UseAbility(creep);
-                        Utils.Sleep(50 + Game.Ping, "qfarm");
+                        Utils.Sleep(200 + Game.Ping, "qfarm");
+                    }
+                }
+                if (Menu.Item("wFarm").GetValue<bool>())
+                {
+                    foreach (var Wcreep in creepW.Where(Wcreep => Wcreep.Health <=
+                                                                Math.Floor((wDmg[wlvl] + eDmg[elvl] * 0.01 * Wcreep.Health) * (1 - Wcreep.MagicDamageResist)) &&
+                                                                Wcreep.Team != me.Team).Where(Wcreep => (me.Spellbook.SpellW.Level > 0 &&
+                                                            me.Spellbook.SpellW.Cooldown == 0) && Wcreep.Position.Distance2D(me.Position) <= Wrange))
+                    {
+                        if (soulring != null && soulring.CanBeCasted() && me.Health >= 400 &&
+                            Utils.SleepCheck("soulring1"))
+                        {
+                            soulring.UseAbility();
+                            Utils.Sleep(Game.Ping, "soulring1");
+                        }
+                        if (me.Spellbook.SpellW.CanBeCasted() && Utils.SleepCheck("Wfarm"))
+                        {
+                            me.Spellbook.SpellW.UseAbility(Wcreep);
+                            Utils.Sleep(200 + Game.Ping, "Wfarm");
+                        }
                     }
                 }
             }
@@ -330,14 +362,13 @@ namespace ZeusSharp
                         Utils.Sleep(50+Game.Ping, "ethereal");
                     }
 
-                    if (halberd != null && halberd.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
+                    if (halberd != null && halberd.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
+                        !linkedsph &&
                         Utils.SleepCheck("halberd") && Menu.Item("active").GetValue<KeyBind>().Active)
                     {
                         halberd.UseAbility(target);
-                        Utils.Sleep(50+Game.Ping, "halberd");
+                        Utils.Sleep(50 + Game.Ping, "halberd");
                     }
-
-                    Utils.ChainStun(me, 100, null, false);
 
                     if (dagon != null && dagon.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) &&
                         Utils.SleepCheck("dagon"))
@@ -375,10 +406,7 @@ namespace ZeusSharp
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform || target.IsChanneling()))
                     {
-                        var wPos = (target.Position - me.Position)*
-                                   (me.Distance2D(target) - (me.Distance2D(target) - Wrange)) /
-                                   me.Distance2D(target) + me.Position;
-                        me.Spellbook.Spell2.UseAbility(wPos);
+                        me.Spellbook.Spell2.CastSkillShot(target);
                         Utils.Sleep(400 + Game.Ping, "W");
                     }
 
@@ -452,9 +480,6 @@ namespace ZeusSharp
             if (vhero.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                 vhero.Spellbook.SpellR.CanBeCasted())
                 damage = 0;
-            //if (vhero.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
-            //    vhero.Spellbook.SpellQ.Cooldown != 0)
-            //    damage = 0;
             if (lens) damage = damage * 1.08;
             var kunkkarum = vhero.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
             if (kunkkarum) damage = damage * 0.5;
@@ -468,7 +493,7 @@ namespace ZeusSharp
                      x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
                      x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || x.Name == "modifier_templar_assassin_refraction_absorb");
 
-            if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune()) me.Stop();
+            if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() || (vhero.Name == "npc_dota_hero_slark" && !vhero.IsVisible)) me.Stop();
             vhero = null;
         }
 
@@ -535,9 +560,6 @@ namespace ZeusSharp
                         }
                         if (v.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                             v.Spellbook.SpellR.CanBeCasted())
-                            damage = 0;
-                        if (v.NetworkName == "CDOTA_Unit_Hero_TemplarAssassin" &&
-                            v.Spellbook.SpellQ.Cooldown != 0)
                             damage = 0;
                         if (lens) damage = damage*1.08;
                         var kunkkarum = v.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
@@ -834,6 +856,33 @@ namespace ZeusSharp
                 DrawFilledBox(2, 37, 110, 20, new ColorBGRA(0, 0, 0, 100));
                 DrawShadowText("Zeus#: Comboing!", 4, 37, Color.LightBlue, _text);
             }
+            if (Game.IsKeyDown(Menu.Item("stealToggle").GetValue<KeyBind>().Key) || statechanged)
+            {
+                if (Menu.Item("stealToggle").GetValue<KeyBind>().Active)
+                {
+                    statechanged = true;
+                    DrawBox(114, 37, 100, 20, 1, new ColorBGRA(0, 200, 100, 100));
+                    DrawFilledBox(114, 37, 100, 20, new ColorBGRA(0, 0, 0, 100));
+                    DrawShadowText("Auto Steal Mode", 114, 37, Color.LightBlue, _text);
+                    if (Utils.SleepCheck("once"))
+                    {
+                        DelayAction.Add(5000, stateswitch);
+                        Utils.Sleep(5000, "once");
+                    }
+                }
+                else
+                {
+                    statechanged = true;
+                    DrawBox(114, 37, 115, 20, 1, new ColorBGRA(0, 200, 100, 100));
+                    DrawFilledBox(114, 37, 115, 20, new ColorBGRA(0, 0, 0, 100));
+                    DrawShadowText("Manual Steal Mode", 114, 37, Color.LightBlue, _text);
+                    if (Utils.SleepCheck("once"))
+                    {
+                        DelayAction.Add(5000, stateswitch);
+                        Utils.Sleep(5000, "once");
+                    }
+                }
+            }
 
             if (drawStealNotice && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active &&
                 !Menu.Item("stealToggle").GetValue<bool>())
@@ -844,6 +893,10 @@ namespace ZeusSharp
             }
         }
 
+        private static void stateswitch()
+        {
+            statechanged = false;
+        }
         private static void Drawing_OnPostReset(EventArgs args)
         {
             _text.OnResetDevice();
