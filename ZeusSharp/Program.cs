@@ -17,6 +17,7 @@ namespace ZeusSharp
         private static bool drawStealNotice;
         private static bool menuadded;
         private static bool lens;
+        private static ParticleEffect effect;
         private static bool statechanged;
         private static int Wdrawn, Qdrawn;
         private static int Wrange, Qrange, realWrange;
@@ -30,8 +31,8 @@ namespace ZeusSharp
         private static Hero me;
         private static Hero vhero;
         private static string map;
+        private static Menu Menu;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
-        private static readonly Menu Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
         private static int[] rDmg = new int[3] { 225, 350, 475 };
         private static readonly int[] qDmg = new int[5] {0, 85, 100, 115, 145};
         private static readonly int[] wDmg = new int[5] {0, 100, 175, 275, 350 };
@@ -39,8 +40,8 @@ namespace ZeusSharp
 
         private static void Main()
         {
-            Game.OnUpdate += Killsteal;
-            Game.OnUpdate += Game_OnUpdate;
+            Events.OnLoad += On_Load;
+            Events.OnClose += On_Close;
             _text = new Font(
                 Drawing.Direct3DDevice9,
                 new FontDescription
@@ -62,7 +63,55 @@ namespace ZeusSharp
                 });
 
             _line = new Line(Drawing.Direct3DDevice9);
+            Game.OnUpdate += Killsteal;
+            Game.OnUpdate += Game_OnUpdate;
+            Drawing.OnPreReset += Drawing_OnPreReset;
+            Drawing.OnPostReset += Drawing_OnPostReset;
+            Drawing.OnEndScene += Drawing_OnEndScene;
+            Drawing.OnDraw += Drawing_OnDraw;
+            AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
+            
+        }
 
+        private static void On_Load(object sender, EventArgs e)
+        {
+            if (me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus)
+            {
+                if (!menuadded)
+                {
+                    InitMenu();
+                    menuadded = true;
+                    //DelayAction.Add(2000, delayedinit);
+                }
+                statechanged = true;
+                map = Game.ShortLevelName;
+            }
+        }
+
+        private static void On_Close(object sender, EventArgs e)
+        {
+                Menu.RemoveFromMainMenu();
+                if (Effect.TryGetValue(1, out effect))
+                {
+                    effect.Dispose();
+                    Effect.Remove(1);
+                }
+                if (Effect.TryGetValue(2, out effect))
+                {
+                    effect.Dispose();
+                    Effect.Remove(2);
+                }
+                if (Effect.TryGetValue(3, out effect))
+                {
+                    effect.Dispose();
+                    Effect.Remove(3);
+                }
+                menuadded = false;
+        }
+
+        private static void InitMenu()
+        {
+            Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
             var comboMenu = new Menu("Combo Tweaks", "combomenu", false, @"..\other\statpop_exclaim", true);
             comboMenu.AddItem(
                 new MenuItem("blink", "Use Blink").SetValue(true)
@@ -121,32 +170,13 @@ namespace ZeusSharp
             Menu.AddSubMenu(comboMenu);
             Menu.AddSubMenu(stealMenu);
             Menu.AddSubMenu(drawMenu);
-            Drawing.OnPreReset += Drawing_OnPreReset;
-            Drawing.OnPostReset += Drawing_OnPostReset;
-            Drawing.OnEndScene += Drawing_OnEndScene;
-            Drawing.OnDraw += Drawing_OnDraw;
-            AppDomain.CurrentDomain.DomainUnload += CurrentDomain_DomainUnload;
-            
+            Menu.AddToMainMenu();
         }
+
         public static void Game_OnUpdate(EventArgs args)
         {
             me = ObjectMgr.LocalHero;
-            if (!Game.IsInGame || me == null || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
-            {
-                if (menuadded)
-                {
-                    menuadded = false;
-                    Menu.RemoveFromMainMenu();
-                }
-                return;
-            }
-            if ((Game.IsInGame || me != null || me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus) && !menuadded)
-            {
-                menuadded = true;
-                Menu.AddToMainMenu();
-                statechanged = true;
-                map = Game.ShortLevelName;
-            }
+            if (!menuadded) return;
             lens = me.Modifiers.Any(x => x.Name == "modifier_item_aether_lens");
             if (lens)
             {
@@ -480,6 +510,9 @@ namespace ZeusSharp
             if (vhero.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                 vhero.Spellbook.SpellR.CanBeCasted())
                 damage = 0;
+            if (vhero.NetworkName == "CDOTA_Unit_Hero_Tusk" &&
+                vhero.Spellbook.SpellW.CooldownLength - 3 > vhero.Spellbook.SpellQ.Cooldown)
+                damage = 0;
             if (lens) damage = damage * 1.08;
             var kunkkarum = vhero.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
             if (kunkkarum) damage = damage * 0.5;
@@ -491,7 +524,10 @@ namespace ZeusSharp
                      x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
                      x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
                      x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
-                     x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || x.Name == "modifier_templar_assassin_refraction_absorb");
+                     x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" ||
+                     x.Name == "modifier_templar_assassin_refraction_absorb" || x.Name == "modifier_necrolyte_reapers_scythe" ||
+                     x.Name == "modifier_storm_spirit_ball_lightning" || x.Name == "modifier_ember_spirit_sleight_of_fist_caster_invulnerability" ||
+                     x.Name == "modifier_ember_spirit_fire_remnant" || x.Name == "modifier_snowball_movement" || x.Name == "modifier_snowball_movement_friendly");
 
             if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() || (vhero.Name == "npc_dota_hero_slark" && !vhero.IsVisible)) me.Stop();
             vhero = null;
@@ -499,6 +535,7 @@ namespace ZeusSharp
 
         public static void Killsteal(EventArgs args)
         {
+            if (!menuadded) return;
             me = ObjectMgr.LocalHero;
 
             if (Utils.SleepCheck("killstealR") && Game.IsInGame && me != null &&
@@ -561,6 +598,9 @@ namespace ZeusSharp
                         if (v.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                             v.Spellbook.SpellR.CanBeCasted())
                             damage = 0;
+                        if (v.NetworkName == "CDOTA_Unit_Hero_Tusk" &&
+                            v.Spellbook.SpellW.CooldownLength - 3 > v.Spellbook.SpellQ.Cooldown)
+                            damage = 0;
                         if (lens) damage = damage*1.08;
                         var kunkkarum = v.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
                         if (kunkkarum) damage = damage*0.5;
@@ -572,7 +612,10 @@ namespace ZeusSharp
                              x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
                              x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
                              x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
-                             x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || x.Name == "modifier_templar_assassin_refraction_absorb");
+                             x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || 
+                             x.Name == "modifier_templar_assassin_refraction_absorb" || x.Name == "modifier_necrolyte_reapers_scythe" ||
+                             x.Name == "modifier_storm_spirit_ball_lightning" || x.Name == "modifier_ember_spirit_sleight_of_fist_caster_invulnerability" ||
+                             x.Name == "modifier_ember_spirit_fire_remnant" || x.Name == "modifier_snowball_movement" || x.Name == "modifier_snowball_movement_friendly");
                         if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
@@ -635,32 +678,8 @@ namespace ZeusSharp
         private static void Drawing_OnDraw(EventArgs args)
         {
             me = ObjectMgr.LocalHero;
-
-            ParticleEffect effect;
+            if (!menuadded) return;
             ParticleEffect scope;
-            #region cleanup old stuff
-
-            if (!Game.IsInGame || me == null || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
-            {
-                if (Effect.TryGetValue(1, out effect))
-                {
-                    effect.Dispose();
-                    Effect.Remove(1);
-                }
-                if (Effect.TryGetValue(2, out effect))
-                {
-                    effect.Dispose();
-                    Effect.Remove(2);
-                }
-                if (Effect.TryGetValue(3, out effect))
-                {
-                    effect.Dispose();
-                    Effect.Remove(3);
-                }
-                return;
-            }
-
-            #endregion
 
             #region target draw
 
@@ -679,7 +698,9 @@ namespace ZeusSharp
                         Effect.Add(i, scope);
                     }
             }
-            if (target == null || !target.IsAlive || target.IsInvul() || !Menu.Item("drawtargetglow").GetValue<bool>() || target.NetworkName.Replace("CDOTA_Unit_Hero_", "") != heronametargeted)
+            if (target == null || !target.IsAlive || target.IsInvul() ||
+                !Menu.Item("drawtargetglow").GetValue<bool>() ||
+                target.NetworkName.Replace("CDOTA_Unit_Hero_", "") != heronametargeted)
             {
                 for (var i = 50; i < 52; i++)
                 {
@@ -814,7 +835,8 @@ namespace ZeusSharp
                 if (!Effect.TryGetValue(2, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    effect.SetControlPoint(1, new Vector3(Menu.Item("saferange").GetValue<Slider>().Value + 1200, 0, 0));
+                    effect.SetControlPoint(1,
+                        new Vector3(Menu.Item("saferange").GetValue<Slider>().Value + 1200, 0, 0));
                     Effect.Add(2, effect);
                 }
             }
@@ -825,7 +847,8 @@ namespace ZeusSharp
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
                     blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value;
-                    effect.SetControlPoint(1, new Vector3(Menu.Item("saferange").GetValue<Slider>().Value + 1200, 0, 0));
+                    effect.SetControlPoint(1,
+                        new Vector3(Menu.Item("saferange").GetValue<Slider>().Value + 1200, 0, 0));
                     Effect.Add(2, effect);
                 }
             }
@@ -837,11 +860,11 @@ namespace ZeusSharp
                     Effect.Remove(2);
                 }
             }
-
         }
 
         private static void Drawing_OnEndScene(EventArgs args)
         {
+            if (!menuadded) return;
             if (Drawing.Direct3DDevice9 == null || Drawing.Direct3DDevice9.IsDisposed || !Game.IsInGame)
                 return;
 
