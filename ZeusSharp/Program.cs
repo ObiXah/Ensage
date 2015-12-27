@@ -90,7 +90,7 @@ namespace ZeusSharp
 
         private static void On_Close(object sender, EventArgs e)
         {
-                Menu.RemoveFromMainMenu();
+                if (menuadded) Menu.RemoveFromMainMenu();
                 if (Effect.TryGetValue(1, out effect))
                 {
                     effect.Dispose();
