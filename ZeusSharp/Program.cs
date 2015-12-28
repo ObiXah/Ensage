@@ -20,7 +20,7 @@ namespace ZeusSharp
         private static ParticleEffect effect;
         private static bool statechanged;
         private static int Wdrawn, Qdrawn;
-        private static int Wrange, Qrange, realWrange;
+        private static int Wrange, Qrange, realWrange, blinkrange;
         private static int blinkdrawnr;
         private static Font _text;
         private static Font _notice;
@@ -31,6 +31,7 @@ namespace ZeusSharp
         private static Hero me;
         private static Hero vhero;
         private static string map;
+        private static AbilityToggler menuValue;
         private static Menu Menu;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
         private static int[] rDmg = new int[3] { 225, 350, 475 };
@@ -81,7 +82,6 @@ namespace ZeusSharp
                 {
                     InitMenu();
                     menuadded = true;
-                    //DelayAction.Add(2000, delayedinit);
                 }
                 statechanged = true;
                 map = Game.ShortLevelName;
@@ -111,14 +111,24 @@ namespace ZeusSharp
 
         private static void InitMenu()
         {
+            var itemdict = new Dictionary<string, bool>
+                           {
+                               { "item_veil_of_discord", true }, { "item_shivas_guard", true},
+                               { "item_sheepstick", true }, { "item_orchid", true }, { "item_dagon_5", true }, { "item_heavens_halberd", true },
+                               { "item_ethereal_blade", true}
+                           };
             Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
             var comboMenu = new Menu("Combo Tweaks", "combomenu", false, @"..\other\statpop_exclaim", true);
+            comboMenu.AddItem(new MenuItem("enabledAbilities", "Items:").SetValue(new AbilityToggler(itemdict)));
             comboMenu.AddItem(
                 new MenuItem("blink", "Use Blink").SetValue(true)
                     .SetTooltip("Blinks to target but not closer than specified range."));
             comboMenu.AddItem(
-                new MenuItem("refresherToggle", "Refresher Use").SetValue(false)
+                new MenuItem("refresherToggle", "Use Refresher").SetValue(false)
                     .SetTooltip("Auto use refresher for 2x ultimate."));
+            comboMenu.AddItem(
+                new MenuItem("arcaneauto", "Auto Arcane Boots").SetValue(false)
+                    .SetTooltip("Auto use arcane boots when off CD and mana wouldn't be wasted."));
             comboMenu.AddItem(
                 new MenuItem("targetsearchrange", "Target Search Range").SetValue(new Slider(1000, 128, 2500))
                     .SetTooltip("Radius of target search range around cursor."));
@@ -128,7 +138,7 @@ namespace ZeusSharp
                         "Increases combo range with blink. P.S. No point in blinking in melee to da face. Shoutout to Evervolv1337 ;)"));
             comboMenu.AddItem(
                 new MenuItem("Wrealrange", "W Non-target Range").SetValue(new Slider(950, 700, 1050))
-                    .SetTooltip("Try to W ground close to enemy giving 1050 max range (tooltip sucks, wiki sucks). Reduce range in case of misses."));
+                    .SetTooltip("Try to W ground close to enemy giving 1050 max range. Reduce range in case of misses."));
 
             var stealMenu = new Menu("Ultimate Usage", "stealmenu", false, "zuus_thundergods_wrath", true);
             stealMenu.AddItem(new MenuItem("stealToggle", "Auto Steal").SetValue(new KeyBind(45, KeyBindType.Toggle)).SetTooltip("Auto R on killable."));
@@ -166,11 +176,11 @@ namespace ZeusSharp
             Menu.AddItem(
                 new MenuItem("wFarm", "Lasthit with W").SetValue(true)
                     .SetTooltip("Siege, neutrals, forge spirits, Lone Druid bear"));
-
             Menu.AddSubMenu(comboMenu);
             Menu.AddSubMenu(stealMenu);
             Menu.AddSubMenu(drawMenu);
             Menu.AddToMainMenu();
+            menuValue = Menu.Item("enabledAbilities").GetValue<AbilityToggler>();
         }
 
         public static void Game_OnUpdate(EventArgs args)
@@ -182,12 +192,14 @@ namespace ZeusSharp
             {
                 Wrange = 900;
                 Qrange = 1050;
+                blinkrange = 1400;
                 realWrange = Menu.Item("Wrealrange").GetValue<Slider>().Value + 200;
             }
             else
             {
                 Wrange = 700;
                 Qrange = 850;
+                blinkrange = 1200;
                 realWrange = Menu.Item("Wrealrange").GetValue<Slider>().Value;
             }
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
@@ -255,6 +267,12 @@ namespace ZeusSharp
             var qlvl = me.Spellbook.SpellQ.Level;
             var wlvl = me.Spellbook.SpellW.Level;
             var elvl = me.Spellbook.SpellE.Level;
+
+            if (arcane != null && arcane.CanBeCasted() && me.MaximumMana > me.Mana + 135 && Utils.SleepCheck("arcane"))
+            {
+                arcane.UseAbility();
+                Utils.Sleep(Game.Ping+150, "arcane");
+            }
 
             var creepQ =
                 ObjectMgr.GetEntities<Creep>()
@@ -339,7 +357,7 @@ namespace ZeusSharp
                     if (
                         blink != null &&
                         blink.CanBeCasted() &&
-                        (me.Distance2D(target) < 1200 + Menu.Item("saferange").GetValue<Slider>().Value) &&
+                        (me.Distance2D(target) < blinkrange + Menu.Item("saferange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > realWrange) &&
                         Utils.SleepCheck("blink1") && Menu.Item("blink").GetValue<bool>() &&
                         Menu.Item("active").GetValue<KeyBind>().Active
@@ -365,28 +383,28 @@ namespace ZeusSharp
                     }
 
                     if (sheepstick != null && sheepstick.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph && !target.IsHexed() && !target.IsStunned() &&
-                        Utils.SleepCheck("sheepstick") && Menu.Item("active").GetValue<KeyBind>().Active)
+                        Utils.SleepCheck("sheepstick") && Menu.Item("active").GetValue<KeyBind>().Active && menuValue.IsEnabled(sheepstick.Name))
                     {
                         sheepstick.UseAbility(target);
                         Utils.Sleep(50+Game.Ping, "sheepstick");
                     }
 
                     if (orchid != null && orchid.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
-                        !target.IsHexed() && Utils.SleepCheck("orchid"))
+                        !target.IsHexed() && Utils.SleepCheck("orchid") && menuValue.IsEnabled(orchid.Name))
                     {
                         orchid.UseAbility(target);
                         Utils.Sleep(50+Game.Ping, "orchid");
                     }
 
                     if (veil != null && veil.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
-                        Utils.SleepCheck("veil"))
+                        Utils.SleepCheck("veil") && menuValue.IsEnabled(veil.Name))
                     {
                         veil.UseAbility(target.Position);
                         Utils.Sleep(50+Game.Ping, "veil");
                     }
 
                     if (ethereal != null && ethereal.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
-                        Utils.SleepCheck("ethereal"))
+                        Utils.SleepCheck("ethereal") && menuValue.IsEnabled(ethereal.Name))
                     {
                         ethereal.UseAbility(target);
                         Utils.Sleep(50+Game.Ping, "ethereal");
@@ -394,21 +412,21 @@ namespace ZeusSharp
 
                     if (halberd != null && halberd.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
                         !linkedsph &&
-                        Utils.SleepCheck("halberd") && Menu.Item("active").GetValue<KeyBind>().Active)
+                        Utils.SleepCheck("halberd") && Menu.Item("active").GetValue<KeyBind>().Active && menuValue.IsEnabled(halberd.Name))
                     {
                         halberd.UseAbility(target);
                         Utils.Sleep(50 + Game.Ping, "halberd");
                     }
 
                     if (dagon != null && dagon.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) &&
-                        Utils.SleepCheck("dagon"))
+                        Utils.SleepCheck("dagon") && menuValue.IsEnabled("item_dagon_5"))
                     {
                         dagon.UseAbility(target);
                         Utils.Sleep(50+Game.Ping, "dagon");
                     }
 
                     if (shiva != null && shiva.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && me.Distance2D(target) < 850 &&
-                        Utils.SleepCheck("shiva") && Menu.Item("active").GetValue<KeyBind>().Active)
+                        Utils.SleepCheck("shiva") && Menu.Item("active").GetValue<KeyBind>().Active && menuValue.IsEnabled(shiva.Name))
                     {
                         shiva.UseAbility();
                         Utils.Sleep(50+Game.Ping, "shiva");
@@ -442,12 +460,12 @@ namespace ZeusSharp
 
                     if (
                         (!(me.Spellbook.Spell2.CanBeCasted() && me.Spellbook.Spell1.CanBeCasted()) || target.IsMagicImmune() || !me.CanCast()) && !ghostform &&
-                        me.CanAttack() && me.Distance2D(target) < 350 &&
+                        me.CanAttack() && me.Distance2D(target) < 350+me.HullRadius+target.HullRadius &&
                         target != null)
                     {
                         Orbwalking.Orbwalk(target);
                     }
-                    else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") && (me.Distance2D(target) >= 350 || ghostform || !me.CanAttack()))
+                    else if (me.CanMove() && !me.IsChanneling() && Utils.SleepCheck("movesleep") && (me.Distance2D(target) >= 350 + me.HullRadius + target.HullRadius || ghostform || !me.CanAttack()))
                     {
                         me.Move(Game.MousePosition);
                         Utils.Sleep(50 + Game.Ping, "movesleep");
@@ -824,9 +842,9 @@ namespace ZeusSharp
                 }
             }
 
-            if (Menu.Item("saferange").GetValue<Slider>().Value != blinkdrawnr)
+            if (Menu.Item("saferange").GetValue<Slider>().Value + blinkrange != blinkdrawnr && blink != null)
             {
-                blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value;
+                blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value + blinkrange;
                 if (Effect.TryGetValue(2, out effect))
                 {
                     effect.Dispose();
@@ -836,19 +854,19 @@ namespace ZeusSharp
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
                     effect.SetControlPoint(1,
-                        new Vector3(Menu.Item("saferange").GetValue<Slider>().Value + 1200, 0, 0));
+                        new Vector3(blinkdrawnr, 0, 0));
                     Effect.Add(2, effect);
                 }
             }
 
-            if (Menu.Item("drawblinkrange").GetValue<bool>())
+            if (Menu.Item("drawblinkrange").GetValue<bool>() && blink != null)
             {
                 if (!Effect.TryGetValue(2, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value;
+                    blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value + blinkrange;
                     effect.SetControlPoint(1,
-                        new Vector3(Menu.Item("saferange").GetValue<Slider>().Value + 1200, 0, 0));
+                        new Vector3(blinkdrawnr, 0, 0));
                     Effect.Add(2, effect);
                 }
             }
