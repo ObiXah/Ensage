@@ -268,29 +268,28 @@ namespace ZeusSharp
             var wlvl = me.Spellbook.SpellW.Level;
             var elvl = me.Spellbook.SpellE.Level;
 
-            if (arcane != null && arcane.CanBeCasted() && me.MaximumMana > me.Mana + 135 && Utils.SleepCheck("arcane"))
+            if (arcane != null && arcane.CanBeCasted() && me.MaximumMana > me.Mana + 135 && Utils.SleepCheck("arcane") && Menu.Item("arcaneauto").GetValue<bool>())
             {
                 arcane.UseAbility();
                 Utils.Sleep(Game.Ping+150, "arcane");
             }
 
             var creepQ =
-                ObjectMgr.GetEntities<Creep>()
+                ObjectMgr.GetEntities<Unit>()
                     .Where(
                         creep =>
                             (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane ||
-                             creep.ClassID != ClassID.CDOTA_BaseNPC_Creep_Siege ||
+                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
                              creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
                             creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
             var creepW =
-                ObjectMgr.GetEntities<Creep>()
+                ObjectMgr.GetEntities<Unit>()
                     .Where(
                         creep =>
-                            (creep.ClassID != ClassID.CDOTA_BaseNPC_Creep_Lane ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
+                            (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
                              creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
                              creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
