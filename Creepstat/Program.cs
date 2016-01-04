@@ -1,6 +1,5 @@
 ﻿﻿
 using System;
-using System.Threading;
 using Ensage;
 using Ensage.Common;
 using Ensage.Common.Menu;
@@ -88,10 +87,6 @@ namespace Creepstat
                 startw = 520f / 1920f * _screenSize.X;
                 spacew = (208f / 1920f) * _screenSize.X;
                 herow = (66f / 1920f) * _screenSize.X;
-                Console.WriteLine(_screenSize.X.ToString() + startw.ToString());
-                //startw = 520;
-                //spacew = 208;
-                //herow = 66;
             }
 
              if (Menu.Item("cs").GetValue<bool>() || Menu.Item("bb").GetValue<bool>())
