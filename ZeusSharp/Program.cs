@@ -135,7 +135,7 @@ namespace ZeusSharp
             comboMenu.AddItem(
                 new MenuItem("saferange", "Blink not closer than").SetValue(new Slider(650, 125, 850))
                     .SetTooltip(
-                        "Increases combo range with blink. P.S. No point in blinking in melee to da face. Shoutout to Evervolv1337 ;)"));
+                        "Increases combo range with blink. P.S. No point in blinking in melee to da face."));
             comboMenu.AddItem(
                 new MenuItem("Wrealrange", "W Non-target Range").SetValue(new Slider(950, 700, 1050))
                     .SetTooltip("Try to W ground close to enemy giving 1050 max range. Reduce range in case of misses."));
