@@ -13,14 +13,13 @@ namespace ZeusSharp
 {
     internal class Program
     {
-        private static Item orchid, sheepstick, veil, soulring, arcane, blink, shiva, dagon, refresher, ethereal, halberd;
+        private static Item orchid, sheepstick, veil, soulring, arcane, blink, shiva, dagon, refresher, ethereal, halberd, bloodthorn;
         private static bool drawStealNotice;
         private static bool menuadded;
-        private static bool lens;
         private static ParticleEffect effect;
         private static bool statechanged;
-        private static int Wdrawn, Qdrawn;
-        private static int Wrange, Qrange, realWrange, blinkrange;
+        private static float Wdrawn, Qdrawn;
+        private static float realWrange;
         private static int blinkdrawnr;
         private static Font _text;
         private static Font _notice;
@@ -34,10 +33,6 @@ namespace ZeusSharp
         private static AbilityToggler menuValue;
         private static Menu Menu;
         private static readonly Dictionary<int, ParticleEffect> Effect = new Dictionary<int, ParticleEffect>();
-        private static int[] rDmg = new int[3] { 225, 350, 475 };
-        private static readonly int[] qDmg = new int[5] {0, 85, 100, 115, 145};
-        private static readonly int[] wDmg = new int[5] {0, 100, 175, 275, 350 };
-        private static readonly int[] eDmg = new int[5] {0, 5, 7, 9, 11};
 
         private static void Main()
         {
@@ -114,7 +109,7 @@ namespace ZeusSharp
             var itemdict = new Dictionary<string, bool>
                            {
                                { "item_veil_of_discord", true }, { "item_shivas_guard", true},
-                               { "item_sheepstick", true }, { "item_orchid", true }, { "item_dagon_5", true }, { "item_heavens_halberd", true },
+                               { "item_sheepstick", true }, { "item_orchid", true }, { "item_bloodthorn", true }, { "item_dagon_5", true }, { "item_heavens_halberd", true },
                                { "item_ethereal_blade", true}
                            };
             Menu = new Menu("Zeus#", "Zeus#", true, "npc_dota_hero_zuus", true);
@@ -137,8 +132,8 @@ namespace ZeusSharp
                     .SetTooltip(
                         "Increases combo range with blink. P.S. No point in blinking in melee to da face. Shoutout to Evervolv1337 ;)"));
             comboMenu.AddItem(
-                new MenuItem("Wrealrange", "W Non-target Range").SetValue(new Slider(950, 700, 1050))
-                    .SetTooltip("Try to W ground close to enemy giving 1050 max range. Reduce range in case of misses."));
+                new MenuItem("Wrealrange", "W Search Radius").SetValue(new Slider(300, 0, 375))
+                    .SetTooltip("Try to W ground close to enemy giving +375 max range. Reduce range in case of misses."));
 
             var stealMenu = new Menu("Ultimate Usage", "stealmenu", false, "zuus_thundergods_wrath", true);
             stealMenu.AddItem(new MenuItem("stealToggle", "Auto Steal").SetValue(new KeyBind(45, KeyBindType.Toggle)).SetTooltip("Auto R on killable."));
@@ -185,36 +180,37 @@ namespace ZeusSharp
 
         public static void Game_OnUpdate(EventArgs args)
         {
-            me = ObjectMgr.LocalHero;
+            float qDmg, wDmg, eDmg, rDmg;
+
+            me = ObjectManager.LocalHero;
             if (!menuadded) return;
-            lens = me.Modifiers.Any(x => x.Name == "modifier_item_aether_lens");
-            if (lens)
-            {
-                Wrange = 900;
-                Qrange = 1050;
-                blinkrange = 1400;
-                realWrange = Menu.Item("Wrealrange").GetValue<Slider>().Value + 200;
-            }
-            else
-            {
-                Wrange = 700;
-                Qrange = 850;
-                blinkrange = 1200;
-                realWrange = Menu.Item("Wrealrange").GetValue<Slider>().Value;
-            }
+
+            qDmg = me.Spellbook.SpellQ.GetDamage(me.Spellbook.SpellQ.Level - 1);
+            wDmg = me.Spellbook.SpellW.GetDamage(me.Spellbook.SpellW.Level - 1);
+            eDmg = me.Spellbook.SpellE.AbilitySpecialData.FirstOrDefault(x => x.Name == "damage_health_pct").GetValue(me.Spellbook.SpellE.Level - 1) / 100 * GetMyTotalSpellAmp();
+            rDmg = me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").AbilitySpecialData.FirstOrDefault(x => x.Name == "damage").GetValue(me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Level - 1);
+
+            //Console.WriteLine("Q DMG: " + qDmg);
+            //Console.WriteLine("W DMG: " + wDmg);
+            //Console.WriteLine("E DMG: " + eDmg);
+            //Console.WriteLine("R DMG: " + rDmg);
+
+            realWrange = me.Spellbook.SpellW.GetCastRange() + Menu.Item("Wrealrange").GetValue<Slider>().Value;
+
             target = me.ClosestToMouseTarget(Menu.Item("targetsearchrange").GetValue<Slider>().Value);
             if (target != null && target.IsMagicImmune())
             {
                 var enemylist2 =
-                    ObjectMgr.GetEntities<Hero>()
+                    ObjectManager.GetEntities<Hero>()
                         .Where(
                             e =>
                                 e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
                                 !e.UnitState.HasFlag(UnitState.MagicImmune) && me.Distance2D(e) < realWrange);
                 if (enemylist2.Count() != 0) target = enemylist2.MinOrDefault(x => x.Health);
             }
+
             var enemylist =
-                ObjectMgr.GetEntities<Hero>()
+                ObjectManager.GetEntities<Hero>()
                     .Where(
                         e =>
                             e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
@@ -224,8 +220,10 @@ namespace ZeusSharp
                 if (me.Distance2D(channeling) < realWrange && channeling.GetChanneledAbility().ChannelTime() > 1)
                     target = channeling;
             }
+
             // Items
             orchid = me.FindItem("item_orchid");
+            bloodthorn = me.FindItem("item_bloodthorn");
             sheepstick = me.FindItem("item_sheepstick");
             veil = me.FindItem("item_veil_of_discord");
             soulring = me.FindItem("item_soul_ring");
@@ -237,8 +235,7 @@ namespace ZeusSharp
             refresher = me.FindItem("item_refresher");
             ethereal = me.FindItem("item_ethereal_blade");
 
-            var refresherComboManacost = me.Spellbook.Spell4.ManaCost + me.Spellbook.Spell2.ManaCost +
-                                         me.Spellbook.Spell1.ManaCost;
+            var refresherComboManacost = me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost + me.Spellbook.Spell2.ManaCost + me.Spellbook.Spell1.ManaCost;
 
             // Manacost calculation
             if (veil != null)
@@ -264,9 +261,6 @@ namespace ZeusSharp
 
             if (refresher != null)
                 refresherComboManacost += refresher.ManaCost;
-            var qlvl = me.Spellbook.SpellQ.Level;
-            var wlvl = me.Spellbook.SpellW.Level;
-            var elvl = me.Spellbook.SpellE.Level;
 
             if (arcane != null && arcane.CanBeCasted() && me.MaximumMana > me.Mana + 135 && Utils.SleepCheck("arcane") && Menu.Item("arcaneauto").GetValue<bool>())
             {
@@ -275,26 +269,29 @@ namespace ZeusSharp
             }
 
             var creepQ =
-                ObjectMgr.GetEntities<Unit>()
+                ObjectManager.GetEntities<Unit>()
                     .Where(
                         creep =>
                             (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Lane ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
-                             creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
+                            creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
                             creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
+
             var creepW =
-                ObjectMgr.GetEntities<Unit>()
+                ObjectManager.GetEntities<Unit>()
                     .Where(
                         creep =>
                             (creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Siege ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
-                             creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
-                             creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Creep_Neutral ||
+                            creep.ClassID == ClassID.CDOTA_Unit_SpiritBear ||
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Invoker_Forged_Spirit ||
+                            creep.ClassID == ClassID.CDOTA_BaseNPC_Creep) &&
                             creep.IsAlive && creep.IsVisible && creep.IsSpawned).ToList();
+
+            //Farm creeps with spells
             if (Menu.Item("qFarm").GetValue<KeyBind>().Active)
             {
                 if (Utils.SleepCheck("fsleep"))
@@ -302,10 +299,13 @@ namespace ZeusSharp
                     me.Move(Game.MousePosition);
                     Utils.Sleep(66 + Game.Ping, "fsleep");
                 }
+
+                
+
                 foreach (var creep in creepQ.Where(creep => creep.Health <=
-                                                            Math.Floor((qDmg[qlvl] + eDmg[elvl] * 0.01 * creep.Health) * (1 - creep.MagicDamageResist)) &&
+                                                            Math.Floor((qDmg + eDmg * creep.Health) * (1 - creep.MagicDamageResist)) &&
                                                             creep.Team != me.Team).Where(creep => (me.Spellbook.SpellQ.Level > 0 && 
-                                                            me.Spellbook.SpellQ.Cooldown == 0) && creep.Position.Distance2D(me.Position) <= Qrange))
+                                                            me.Spellbook.SpellQ.Cooldown == 0) && creep.Position.Distance2D(me.Position) <= me.Spellbook.SpellQ.GetCastRange()))
                 {
                     if (soulring != null && soulring.CanBeCasted() && me.Health >= 400 && Utils.SleepCheck("soulring1"))
                     {
@@ -321,9 +321,9 @@ namespace ZeusSharp
                 if (Menu.Item("wFarm").GetValue<bool>())
                 {
                     foreach (var Wcreep in creepW.Where(Wcreep => Wcreep.Health <=
-                                                                Math.Floor((wDmg[wlvl] + eDmg[elvl] * 0.01 * Wcreep.Health) * (1 - Wcreep.MagicDamageResist)) &&
-                                                                Wcreep.Team != me.Team).Where(Wcreep => (me.Spellbook.SpellW.Level > 0 &&
-                                                            me.Spellbook.SpellW.Cooldown == 0) && Wcreep.Position.Distance2D(me.Position) <= Wrange))
+                                                                Math.Floor((wDmg + eDmg * Wcreep.Health) * (1 - Wcreep.MagicDamageResist))
+                                                                && Wcreep.Team != me.Team).Where(Wcreep => (me.Spellbook.SpellW.Level > 0 && me.Spellbook.SpellW.Cooldown == 0)
+                                                                && Wcreep.Position.Distance2D(me.Position) <= me.Spellbook.SpellW.GetCastRange()))
                     {
                         if (soulring != null && soulring.CanBeCasted() && me.Health >= 400 &&
                             Utils.SleepCheck("soulring1"))
@@ -339,6 +339,8 @@ namespace ZeusSharp
                     }
                 }
             }
+
+            //Combo?
             if ((Menu.Item("active").GetValue<KeyBind>().Active || Menu.Item("harass").GetValue<KeyBind>().Active) && !Menu.Item("confirmSteal").GetValue<KeyBind>().Active && me.IsAlive)
             {
                 if (target != null && target.IsAlive && !target.IsInvul())
@@ -356,7 +358,7 @@ namespace ZeusSharp
                     if (
                         blink != null &&
                         blink.CanBeCasted() &&
-                        (me.Distance2D(target) < blinkrange + Menu.Item("saferange").GetValue<Slider>().Value) &&
+                        (me.Distance2D(target) < blink.GetCastRange() + Menu.Item("saferange").GetValue<Slider>().Value) &&
                         (me.Distance2D(target) > realWrange) &&
                         Utils.SleepCheck("blink1") && Menu.Item("blink").GetValue<bool>() &&
                         Menu.Item("active").GetValue<KeyBind>().Active
@@ -392,7 +394,14 @@ namespace ZeusSharp
                         !target.IsHexed() && Utils.SleepCheck("orchid") && menuValue.IsEnabled(orchid.Name))
                     {
                         orchid.UseAbility(target);
-                        Utils.Sleep(50+Game.Ping, "orchid");
+                        Utils.Sleep(50 + Game.Ping, "orchid");
+                    }
+
+                    if (bloodthorn != null && bloodthorn.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
+                        !target.IsHexed() && Utils.SleepCheck("bloodthorn") && menuValue.IsEnabled(bloodthorn.Name))
+                    {
+                        bloodthorn.UseAbility(target);
+                        Utils.Sleep(50 + Game.Ping, "bloodthorn");
                     }
 
                     if (veil != null && veil.CanBeCasted() && !target.IsMagicImmune() && !target.IsIllusion &&
@@ -433,13 +442,13 @@ namespace ZeusSharp
                     
                     if (me.Spellbook.SpellQ != null && me.Spellbook.SpellQ.CanBeCasted() &&
                         me.Mana > me.Spellbook.Spell1.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && me.CanCast() &&
-                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform))
+                        Utils.SleepCheck("Q") && (!me.Spellbook.Spell2.CanBeCasted() || linkedsph) && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength - 1.5 || ghostform))
                     {
                         me.Spellbook.SpellQ.UseAbility(target);
                         Utils.Sleep(200 + Game.Ping, "Q");
                     }
 
-                    if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < Wrange) &&
+                    if (me.Spellbook.Spell2 != null && (me.Distance2D(target) < me.Spellbook.SpellW.GetCastRange()) &&
                         me.Spellbook.Spell2.CanBeCasted() && me.Mana > me.Spellbook.Spell2.ManaCost && !linkedsph && me.CanCast() &&
                         !target.IsMagicImmune() && !target.IsIllusion && Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength - 1.5 || ghostform || target.IsChanneling()))
                     {
@@ -449,7 +458,7 @@ namespace ZeusSharp
 
                     if (me.Spellbook.Spell2 != null &&
                         (me.Distance2D(target) < realWrange) &&
-                        (me.Distance2D(target) > Wrange) && me.Spellbook.Spell2.CanBeCasted() && me.CanCast() &&
+                        (me.Distance2D(target) > me.Spellbook.SpellW.GetCastRange()) && me.Spellbook.Spell2.CanBeCasted() && me.CanCast() &&
                         me.Mana > me.Spellbook.Spell2.ManaCost && !target.IsMagicImmune() && !target.IsIllusion && !linkedsph &&
                         Utils.SleepCheck("W") && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-1.5 || ghostform || target.IsChanneling()))
                     {
@@ -469,18 +478,20 @@ namespace ZeusSharp
                         me.Move(Game.MousePosition);
                         Utils.Sleep(50 + Game.Ping, "movesleep");
                     }
+
                     if (Menu.Item("refresherToggle").GetValue<bool>() && !target.IsMagicImmune() && refresher != null &&
-                        refresher.CanBeCasted() && me.Spellbook.Spell4.CanBeCasted() && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) &&
+                        refresher.CanBeCasted() && me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").CanBeCasted() && (ethereal == null || ethereal.Cooldown < ethereal.CooldownLength-2 || ghostform) &&
                         Utils.SleepCheck("ultiRefresher") && Menu.Item("active").GetValue<KeyBind>().Active)
                     {
-                        me.Spellbook.Spell4.UseAbility();
+                        me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").UseAbility();
                         Utils.Sleep(100 + Game.Ping, "ultiRefresher");
                     }
 
                     if (Menu.Item("refresherToggle").GetValue<bool>() && refresher != null && refresher.CanBeCasted() && me.Mana > refresherComboManacost &&
                         Utils.SleepCheck("refresher") && !target.IsMagicImmune() && target != null &&
-                        !me.Spellbook.Spell4.CanBeCasted() && !me.Spellbook.Spell2.CanBeCasted() &&
+                        !me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").CanBeCasted() && !me.Spellbook.Spell2.CanBeCasted() &&
                         (orchid == null || orchid.Cooldown > 0) &&
+                        (bloodthorn == null || bloodthorn.Cooldown > 0) &&
                         (sheepstick == null || sheepstick.Cooldown > 0) &&
                         (veil == null || veil.Cooldown > 0) &&
                         (shiva == null || shiva.Cooldown > 0) &&
@@ -503,88 +514,78 @@ namespace ZeusSharp
 
         public static void cancelult()
         {
-            me = ObjectMgr.LocalHero;
-            if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
-            {
-                rDmg = new int[3] {440, 540, 640};
-            }
-            else
-            {
-                rDmg = new int[3] {225, 350, 475};
-            }
-            var momd = vhero.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
-            var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - vhero.MagicDamageResist));
-            if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < 1200)
-                damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * vhero.Health * (1 - vhero.MagicDamageResist);
-            if (vhero.NetworkName == "CDOTA_Unit_Hero_Spectre" && vhero.Spellbook.Spell3.Level > 0)
-            {
-                damage =
-                    Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1] *
-                               (1 - (0.10 + vhero.Spellbook.Spell3.Level * 0.04)) * (1 - vhero.MagicDamageResist));
-                if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < 1150)
-                    damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * vhero.Health * (1 - vhero.MagicDamageResist);
-            }
+            me = ObjectManager.LocalHero;
+            float eDmg, rDmg;
+
+            eDmg = me.Spellbook.SpellE.AbilitySpecialData.FirstOrDefault(x => x.Name == "damage_health_pct").GetValue(me.Spellbook.SpellE.Level - 1) / 100 * GetMyTotalSpellAmp() * vhero.Health;
+            rDmg = me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").AbilitySpecialData.FirstOrDefault(x => x.Name == "damage").GetValue(me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Level - 1);
+
+            var rDamage = vhero.SpellDamageTaken(rDmg, DamageType.Magical, me, me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Name);
+            var eDamage = eDmg * (1 - vhero.MagicDamageResist);
+
+            //Console.WriteLine("rDamage = " + rDamage);
+            //Console.WriteLine("eDamage = " + eDamage);
+
+            if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(vhero) < me.Spellbook.SpellE.GetCastRange())
+                rDamage = rDamage + eDamage;
+           
             if (vhero.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                 vhero.Spellbook.SpellR.CanBeCasted())
-                damage = 0;
+                rDamage = 0;
+
             if (vhero.NetworkName == "CDOTA_Unit_Hero_Tusk" &&
                 vhero.Spellbook.SpellW.CooldownLength - 3 > vhero.Spellbook.SpellQ.Cooldown)
-                damage = 0;
-            if (lens) damage = damage * 1.08;
-            var kunkkarum = vhero.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
-            if (kunkkarum) damage = damage * 0.5;
-            if (momd) damage = damage*1.3;
-            var unkillabletarget1 = vhero.Modifiers.Any(
-                x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                     x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
-                     x.Name == "modifier_puck_phase_shift" ||
-                     x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                     x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
-                     x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
-                     x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" ||
-                     x.Name == "modifier_templar_assassin_refraction_absorb" || x.Name == "modifier_necrolyte_reapers_scythe" ||
-                     x.Name == "modifier_storm_spirit_ball_lightning" || x.Name == "modifier_ember_spirit_sleight_of_fist_caster_invulnerability" ||
-                     x.Name == "modifier_ember_spirit_fire_remnant" || x.Name == "modifier_snowball_movement" || x.Name == "modifier_snowball_movement_friendly");
+                rDamage = 0;
 
-            if (vhero.Health > damage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() || (vhero.Name == "npc_dota_hero_slark" && !vhero.IsVisible)) me.Stop();
+            var unkillabletarget1 = vhero.Modifiers.Any(
+                x =>    x.Name == "modifier_abaddon_borrowed_time" || 
+                        x.Name == "modifier_dazzle_shallow_grave" ||
+                        x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" ||
+                        x.Name == "modifier_puck_phase_shift" ||
+                        x.Name == "modifier_brewmaster_storm_cyclone" || 
+                        x.Name == "modifier_eul_cyclone" ||
+                        x.Name == "modifier_item_aegis" || 
+                        x.Name == "modifier_slark_shadow_dance" ||
+                        x.Name == "modifier_ember_spirit_flame_guard" ||
+                        x.Name == "modifier_abaddon_aphotic_shield" || 
+                        x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
+                        x.Name == "modifier_shadow_demon_disruption" || 
+                        x.Name == "modifier_nyx_assassin_spiked_carapace" ||
+                        x.Name == "modifier_templar_assassin_refraction_absorb" || 
+                        x.Name == "modifier_necrolyte_reapers_scythe" ||
+                        x.Name == "modifier_storm_spirit_ball_lightning" || 
+                        x.Name == "modifier_ember_spirit_sleight_of_fist_caster_invulnerability" ||
+                        x.Name == "modifier_ember_spirit_fire_remnant" || 
+                        x.Name == "modifier_snowball_movement" || 
+                        x.Name == "modifier_snowball_movement_friendly");
+
+            if (vhero.Health > rDamage || !vhero.IsAlive || vhero.IsIllusion || unkillabletarget1 || vhero.IsMagicImmune() || (vhero.Name == "npc_dota_hero_slark" && !vhero.IsVisible)) me.Stop();
             vhero = null;
         }
 
         public static void Killsteal(EventArgs args)
         {
             if (!menuadded) return;
-            me = ObjectMgr.LocalHero;
+            me = ObjectManager.LocalHero;
+
+            float eDmg, rDmg;
+
+            rDmg = me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").AbilitySpecialData.FirstOrDefault(x => x.Name == "damage").GetValue(me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Level - 1);
 
             if (Utils.SleepCheck("killstealR") && Game.IsInGame && me != null &&
                 me.ClassID == ClassID.CDOTA_Unit_Hero_Zuus && me.IsAlive)
             {
                 drawStealNotice = false;
-                if (map == "forest_solo" || map == "desert_duo" || map == "mines_trio" || map =="desert_quintet")
-                    if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
-                    {
-                        rDmg = new int[3] {350, 450, 550};
-                    }
-                    else
-                    {
-                        rDmg = new int[3] {200, 300, 400};
-                    }
-                else if (me.HasItem(ClassID.CDOTA_Item_UltimateScepter))
-                {
-                    rDmg = new int[3] {440, 540, 640};
-                }
-                else
-                {
-                    rDmg = new int[3] {225, 350, 475};
-                }
+                
                 if (
                     ((!Menu.Item("active").GetValue<KeyBind>().Active && Menu.Item("useRincombo").GetValue<bool>()) ||
                      !Menu.Item("useRincombo").GetValue<bool>() ||
                      !Menu.Item("stealToggle").GetValue<KeyBind>().Active) &&
-                     me.Spellbook.Spell4.Level > 0 && me.Spellbook.Spell4.Cooldown == 0
+                     me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Level > 0 && me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Cooldown == 0
                     )
                 {
                     var enemy =
-                        ObjectMgr.GetEntities<Hero>()
+                        ObjectManager.GetEntities<Hero>()
                             .Where(
                                 e =>
                                     e.Team != me.Team && e.IsAlive && e.IsVisible && !e.IsIllusion &&
@@ -601,39 +602,47 @@ namespace ZeusSharp
 
                     foreach (var v in enemy)
                     {
-                        var damage = Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*(1 - v.MagicDamageResist));
-                        if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1150)
-                            damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * v.Health * (1 - v.MagicDamageResist);
-                        if (v.NetworkName == "CDOTA_Unit_Hero_Spectre" && v.Spellbook.Spell3.Level > 0)
-                        {
-                            damage =
-                                Math.Floor(rDmg[me.Spellbook.Spell4.Level - 1]*
-                                           (1 - (0.10 + v.Spellbook.Spell3.Level*0.04))*(1 - v.MagicDamageResist));
-                            if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < 1150)
-                                damage = damage + eDmg[me.Spellbook.Spell3.Level] * 0.01 * v.Health * (1 - v.MagicDamageResist);
-                        }
+                        eDmg = me.Spellbook.SpellE.AbilitySpecialData.FirstOrDefault(x => x.Name == "damage_health_pct").GetValue(me.Spellbook.SpellE.Level - 1) / 100 * GetMyTotalSpellAmp() * v.Health;
+
+                        var rDamage = v.SpellDamageTaken(rDmg, DamageType.Magical, me, me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Name);
+                        var eDamage = eDmg * (1 - v.MagicDamageResist);
+
+                        //Console.WriteLine("rDamage = " + v.SpellDamageTaken(rDmg, DamageType.Magical, me, me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").Name));
+                        //Console.WriteLine("eDamage = " + eDamage);
+
+                        if (Menu.Item("stealEdmg").GetValue<bool>() && me.Distance2D(v) < me.Spellbook.SpellE.GetCastRange())
+                            rDamage = rDamage + eDamage;
+
                         if (v.NetworkName == "CDOTA_Unit_Hero_SkeletonKing" &&
                             v.Spellbook.SpellR.CanBeCasted())
-                            damage = 0;
+                            rDamage = 0;
                         if (v.NetworkName == "CDOTA_Unit_Hero_Tusk" &&
                             v.Spellbook.SpellW.CooldownLength - 3 > v.Spellbook.SpellQ.Cooldown)
-                            damage = 0;
-                        if (lens) damage = damage*1.08;
-                        var kunkkarum = v.Modifiers.Any(x => x.Name == "modifier_kunkka_ghost_ship_damage_absorb");
-                        if (kunkkarum) damage = damage*0.5;
-                        var momed = v.Modifiers.Any(x => x.Name == "modifier_item_mask_of_madness_berserk");
-                        if (momed) damage = damage * 1.3;
+                            rDamage = 0;
+
                         var unkillabletarget = v.Modifiers.Any(
-                        x => x.Name == "modifier_abaddon_borrowed_time" || x.Name == "modifier_dazzle_shallow_grave" ||
-                             x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || x.Name == "modifier_puck_phase_shift" ||
-                             x.Name == "modifier_brewmaster_storm_cyclone" || x.Name == "modifier_eul_cyclone" ||
-                             x.Name == "modifier_item_aegis" || x.Name == "modifier_slark_shadow_dance" || x.Name == "modifier_ember_spirit_flame_guard" ||
-                             x.Name == "modifier_abaddon_aphotic_shield" || x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
-                             x.Name == "modifier_shadow_demon_disruption" || x.Name == "modifier_nyx_assassin_spiked_carapace" || 
-                             x.Name == "modifier_templar_assassin_refraction_absorb" || x.Name == "modifier_necrolyte_reapers_scythe" ||
-                             x.Name == "modifier_storm_spirit_ball_lightning" || x.Name == "modifier_ember_spirit_sleight_of_fist_caster_invulnerability" ||
-                             x.Name == "modifier_ember_spirit_fire_remnant" || x.Name == "modifier_snowball_movement" || x.Name == "modifier_snowball_movement_friendly");
-                        if (v.Health < damage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
+                        x =>    x.Name == "modifier_abaddon_borrowed_time" || 
+                                x.Name == "modifier_dazzle_shallow_grave" ||
+                                x.Name == "modifier_obsidian_destroyer_astral_imprisonment_prison" || 
+                                x.Name == "modifier_puck_phase_shift" ||
+                                x.Name == "modifier_brewmaster_storm_cyclone" || 
+                                x.Name == "modifier_eul_cyclone" ||
+                                x.Name == "modifier_item_aegis" || 
+                                x.Name == "modifier_slark_shadow_dance" || 
+                                x.Name == "modifier_ember_spirit_flame_guard" ||
+                                x.Name == "modifier_abaddon_aphotic_shield" || 
+                                x.Name == "modifier_phantom_lancer_doppelwalk_phase" ||
+                                x.Name == "modifier_shadow_demon_disruption" || 
+                                x.Name == "modifier_nyx_assassin_spiked_carapace" || 
+                                x.Name == "modifier_templar_assassin_refraction_absorb" || 
+                                x.Name == "modifier_necrolyte_reapers_scythe" ||
+                                x.Name == "modifier_storm_spirit_ball_lightning" || 
+                                x.Name == "modifier_ember_spirit_sleight_of_fist_caster_invulnerability" ||
+                                x.Name == "modifier_ember_spirit_fire_remnant" || 
+                                x.Name == "modifier_snowball_movement" || 
+                                x.Name == "modifier_snowball_movement_friendly");
+
+                        if (v.Health < rDamage && v != null && !v.IsIllusion && !unkillabletarget && (!v.IsInvisible() || (v.IsInvisible() && v.IsVisible)))
                         {
                             drawStealNotice = true;
 
@@ -644,36 +653,36 @@ namespace ZeusSharp
                                  Menu.Item("stealToggle").GetValue<KeyBind>().Active) && !v.IsIllusion)
                             {
                                 if (soulring != null && soulring.CanBeCasted() && Utils.SleepCheck("soulring") &&
-                                    me.Mana < me.Spellbook.Spell4.ManaCost &&
-                                    me.Mana + 150 > me.Spellbook.Spell4.ManaCost)
+                                    me.Mana < me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost &&
+                                    me.Mana + 150 > me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost)
                                 {
                                     soulring.UseAbility();
                                     Utils.Sleep(Game.Ping, "soulring");
                                 }
                                 if (arcane != null && arcane.CanBeCasted() && Utils.SleepCheck("arcane") &&
-                                    me.Mana < me.Spellbook.Spell4.ManaCost &&
-                                    me.Mana + 135 > me.Spellbook.Spell4.ManaCost)
+                                    me.Mana < me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost &&
+                                    me.Mana + 135 > me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost)
                                 {
                                     arcane.UseAbility();
                                     Utils.Sleep(Game.Ping, "arcane");
                                 }
                                 if (arcane != null && soulring != null && Utils.SleepCheck("arcane") &&
                                     arcane.CanBeCasted() && soulring.CanBeCasted() &&
-                                    me.Mana < me.Spellbook.Spell4.ManaCost &&
-                                    me.Mana + 285 > me.Spellbook.Spell4.ManaCost)
+                                    me.Mana < me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost &&
+                                    me.Mana + 285 > me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost)
                                 {
                                     arcane.UseAbility();
                                     soulring.UseAbility();
                                     Utils.Sleep(Game.Ping, "arcane");
                                 }
-                                if (me.Mana > me.Spellbook.Spell4.ManaCost)
+                                if (me.Mana > me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").ManaCost)
                                 {
                                     if (soulring != null && soulring.CanBeCasted() && Utils.SleepCheck("soulring") && me.Health > me.MaximumHealth * 0.4)
                                     {
                                         soulring.UseAbility();
                                         Utils.Sleep(Game.Ping, "soulring");
-                                    }  
-                                    me.Spellbook.Spell4.UseAbility();
+                                    }
+                                    me.Spellbook.Spells.FirstOrDefault(x => x.Name == "zuus_thundergods_wrath").UseAbility();
                                     vhero = v;
                                     DelayAction.Add(385, cancelult);
                                     Utils.Sleep(400, "killstealR");
@@ -694,7 +703,7 @@ namespace ZeusSharp
 
         private static void Drawing_OnDraw(EventArgs args)
         {
-            me = ObjectMgr.LocalHero;
+            me = ObjectManager.LocalHero;
             if (!menuadded) return;
             ParticleEffect scope;
 
@@ -807,9 +816,9 @@ namespace ZeusSharp
                 }
             }
 
-            if (Qrange != Qdrawn)
+            if (me.Spellbook.SpellQ.GetCastRange() != Qdrawn)
             {
-                Qdrawn = Qrange;
+                Qdrawn = me.Spellbook.SpellQ.GetCastRange();
                 if (Effect.TryGetValue(3, out effect))
                 {
                     effect.Dispose();
@@ -818,7 +827,7 @@ namespace ZeusSharp
                 if (!Effect.TryGetValue(3, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    effect.SetControlPoint(1, new Vector3(Qrange, 0, 0));
+                    effect.SetControlPoint(1, new Vector3(me.Spellbook.SpellQ.GetCastRange(), 0, 0));
                     Effect.Add(3, effect);
                 }
             }
@@ -828,7 +837,7 @@ namespace ZeusSharp
                 if (!Effect.TryGetValue(3, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    effect.SetControlPoint(1, new Vector3(Qrange, 0, 0));
+                    effect.SetControlPoint(1, new Vector3(me.Spellbook.SpellQ.GetCastRange(), 0, 0));
                     Effect.Add(3, effect);
                 }
             }
@@ -841,9 +850,9 @@ namespace ZeusSharp
                 }
             }
 
-            if (Menu.Item("saferange").GetValue<Slider>().Value + blinkrange != blinkdrawnr && blink != null)
+            if (Menu.Item("saferange").GetValue<Slider>().Value + blink.GetCastRange() != blinkdrawnr && blink != null)
             {
-                blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value + blinkrange;
+                blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value + (int)blink.GetCastRange();
                 if (Effect.TryGetValue(2, out effect))
                 {
                     effect.Dispose();
@@ -863,7 +872,7 @@ namespace ZeusSharp
                 if (!Effect.TryGetValue(2, out effect))
                 {
                     effect = me.AddParticleEffect(@"particles\ui_mouseactions\range_display.vpcf");
-                    blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value + blinkrange;
+                    blinkdrawnr = Menu.Item("saferange").GetValue<Slider>().Value + (int)blink.GetCastRange();
                     effect.SetControlPoint(1,
                         new Vector3(blinkdrawnr, 0, 0));
                     Effect.Add(2, effect);
@@ -885,8 +894,8 @@ namespace ZeusSharp
             if (Drawing.Direct3DDevice9 == null || Drawing.Direct3DDevice9.IsDisposed || !Game.IsInGame)
                 return;
 
-            var player = ObjectMgr.LocalPlayer;
-            me = ObjectMgr.LocalHero;
+            var player = ObjectManager.LocalPlayer;
+            me = ObjectManager.LocalHero;
             if (player == null || player.Team == Team.Observer || me.ClassID != ClassID.CDOTA_Unit_Hero_Zuus)
                 return;
 
@@ -981,6 +990,30 @@ namespace ZeusSharp
         {
             f.DrawText(null, stext, x + 1, y + 1, Color.Black);
             f.DrawText(null, stext, x, y, color);
+        }
+
+        public static float GetMyTotalSpellAmp ()
+        {
+            me = ObjectManager.LocalHero;
+            var totalSpellAmp = 0f;
+
+            var talent = me.Spellbook.Spells.FirstOrDefault(x => x.Name.Contains("special_bonus_spell_amplify"));
+            if (talent?.Level > 0)
+            {
+                totalSpellAmp += talent.GetAbilityData("value") / 100f;
+            }
+
+                    if (me.Inventory.Items.FirstOrDefault(x => x.ClassID == ClassID.CDOTA_Item_Aether_Lens) != null)
+                    {
+                        totalSpellAmp += me.Inventory.Items.FirstOrDefault(x => x.ClassID == ClassID.CDOTA_Item_Aether_Lens).GetAbilityData("spell_amp") / 100f;
+                    }
+
+            if (me != null)
+            {
+                totalSpellAmp += (100f + me.TotalIntelligence / 16f) / 100f;
+            }
+
+            return totalSpellAmp;
         }
     }
 }

@@ -53,21 +53,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Ensage">
-      <HintPath>D:\LeagueSharp\System\Ensage.dll</HintPath>
+      <HintPath>C:\PS\References\Ensage.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Ensage.Common">
-      <HintPath>D:\LeagueSharp\System\Ensage.Common.dll</HintPath>
+      <HintPath>C:\PS\References\Ensage.Common.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\LeagueSharp\System\Newtonsoft.Json.dll</HintPath>
+      <HintPath>C:\PS\References\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="SharpDX">
-      <HintPath>D:\LeagueSharp\System\SharpDX.dll</HintPath>
+      <HintPath>C:\PS\References\SharpDX.dll</HintPath>
     </Reference>
     <Reference Include="SharpDX.Direct3D9">
-      <HintPath>D:\LeagueSharp\System\SharpDX.Direct3D9.dll</HintPath>
+      <HintPath>C:\PS\References\SharpDX.Direct3D9.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
